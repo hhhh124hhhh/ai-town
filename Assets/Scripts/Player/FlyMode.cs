@@ -12,12 +12,16 @@ using UnityEngine.InputSystem;
 public class FlyMode : MonoBehaviour
 {
     [Header("Flight")]
-    [Tooltip("普通飞行速度 m/s")]
-    public float FlySpeed = 12.0f;
+    [Tooltip("普通飞行速度 m/s（按 0.25 世界比例调低，防眩晕）")]
+    public float FlySpeed = 6.0f;
     [Tooltip("冲刺飞行速度 m/s")]
-    public float FlySprintSpeed = 30.0f;
+    public float FlySprintSpeed = 15.0f;
     [Tooltip("视角旋转灵敏度（与 FirstPersonController.RotationSpeed 同义）")]
     public float RotationSpeed = 1.0f;
+    [Tooltip("视角平滑系数，越大跟手越小越稳（0=关闭平滑）")]
+    public float RotationSmoothing = 12.0f;
+    [Tooltip("移动加速度渐变，越大越快提速（0=瞬移启停）")]
+    public float MoveAcceleration = 6.0f;
 
     private FirstPersonController _fpc;
     private CharacterController _controller;
@@ -25,6 +29,8 @@ public class FlyMode : MonoBehaviour
     private Transform _cameraTarget;
     private bool _flying;
     private float _pitch;
+    private float _yawVelocity;   // 平滑后的实际移动速度
+    private Vector3 _moveVelocity;
 
     private void Awake()
     {
@@ -69,7 +75,16 @@ public class FlyMode : MonoBehaviour
         if (direction.sqrMagnitude > 1f) direction.Normalize();
 
         direction += Vector3.up * GetVerticalAxis();
-        transform.position += direction * (speed * Time.deltaTime);
+        if (direction.sqrMagnitude > 1f) direction.Normalize();
+
+        // 速度渐变：SmoothDamp 让启停有加速度感，避免瞬移启停带来的眩晕
+        Vector3 target = direction * speed;
+        float smooth = MoveAcceleration > 0f ? MoveAcceleration : 1000f;
+        _moveVelocity = Vector3.Lerp(
+            _moveVelocity,
+            target,
+            1f - Mathf.Exp(-smooth * Time.deltaTime));
+        transform.position += _moveVelocity * Time.deltaTime;
     }
 
     private void CameraRotation()
@@ -81,7 +96,14 @@ public class FlyMode : MonoBehaviour
         _pitch += -_input.look.y * RotationSpeed;
         _pitch = Mathf.Clamp(_pitch, -90f, 90f);
 
-        _cameraTarget.transform.localRotation = Quaternion.Euler(_pitch, 0f, 0f);
+        // 平滑俯仰：目标角与当前角插值，减少快速甩头的眩晕感
+        float currentPitch = _cameraTarget.transform.localEulerAngles.x;
+        if (currentPitch > 180f) currentPitch -= 360f;
+        float smoothedPitch = RotationSmoothing > 0f
+            ? Mathf.Lerp(currentPitch, _pitch, 1f - Mathf.Exp(-RotationSmoothing * Time.unscaledDeltaTime))
+            : _pitch;
+
+        _cameraTarget.transform.localRotation = Quaternion.Euler(smoothedPitch, 0f, 0f);
         transform.Rotate(Vector3.up * (_input.look.x * RotationSpeed));
     }
 
@@ -106,6 +128,7 @@ public class FlyMode : MonoBehaviour
         {
             if (_fpc != null) _fpc.enabled = true;
             if (_controller != null) _controller.enabled = true;
+            _moveVelocity = Vector3.zero; // 清零速度缓存，下次开启从静止起步
             Debug.Log("[FlyMode] 飞行模式关闭");
         }
     }
