@@ -728,9 +728,10 @@ public class ApiClient : MonoBehaviour {
 **Python 端启动**：
 
 ```Bash
-cd D:\luanti-builder
-python luanti_builder_web.py
-# 服务运行在 http://localhost:8765
+cd D:\ai-town-untiy\server
+python ai_town_server.py
+# 或直接双击 server\start_server.bat
+# 服务运行在 http://localhost:8765（自包含 nlp.py/json_gen.py，无 luanti-builder 依赖）
 ```
 
 **Unity 端 API 地址配置**：

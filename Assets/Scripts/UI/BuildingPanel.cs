@@ -37,7 +37,9 @@ public class BuildingPanel : MonoBehaviour
         var kb = UnityEngine.InputSystem.Keyboard.current;
         if (kb != null && kb.tabKey.wasPressedThisFrame) _visible = !_visible;
         // 回车=生成（便携手感 + 远程测试钩子：桥 manage_input 可触发）
-        if (kb != null && kb.enterKey.wasPressedThisFrame && !_busy && _visible)
+        // 对话框打开时让位给 DialogSystem，避免一次回车同时触发两处
+        if (kb != null && kb.enterKey.wasPressedThisFrame && !_busy && _visible
+            && DialogSystem.Instance == null)
         {
             StartCoroutine(GenerateCo(_input, null));
         }

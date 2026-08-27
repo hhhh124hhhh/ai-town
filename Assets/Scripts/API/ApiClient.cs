@@ -42,6 +42,65 @@ public class ApiClient : MonoBehaviour
         public string error;
     }
 
+    [Serializable]
+    public class NpcChatRequest
+    {
+        public string name;
+        public string message;
+    }
+
+    [Serializable]
+    public class NpcChatResponse
+    {
+        public string name;
+        public string reply;
+        public string error;
+    }
+
+    /// <summary>与 NPC 对话。onReply 收到回复文本，onError 收到错误信息。</summary>
+    public IEnumerator ChatWithNPC(string npcName, string message, Action<string> onReply, Action<string> onError)
+    {
+        var req = new NpcChatRequest { name = npcName, message = message };
+        string json = JsonUtility.ToJson(req);
+
+        using (var request = new UnityWebRequest($"{baseUrl}/api/npc/chat", "POST"))
+        {
+            byte[] body = Encoding.UTF8.GetBytes(json);
+            request.uploadHandler = new UploadHandlerRaw(body);
+            request.downloadHandler = new DownloadHandlerBuffer();
+            request.SetRequestHeader("Content-Type", "application/json");
+            request.timeout = Mathf.CeilToInt(timeoutSeconds);
+
+            yield return request.SendWebRequest();
+
+            if (request.result != UnityWebRequest.Result.Success)
+            {
+                onError?.Invoke($"网络错误: {request.error}");
+                yield break;
+            }
+
+            NpcChatResponse resp = null;
+            try
+            {
+                resp = JsonUtility.FromJson<NpcChatResponse>(request.downloadHandler.text);
+            }
+            catch (Exception e)
+            {
+                onError?.Invoke($"响应解析失败: {e.Message}");
+                yield break;
+            }
+
+            if (resp == null || !string.IsNullOrEmpty(resp.error))
+            {
+                onError?.Invoke(resp?.error ?? "空响应");
+            }
+            else
+            {
+                onReply?.Invoke(resp.reply);
+            }
+        }
+    }
+
     /// <summary>
     /// 自然语言描述生成建筑。onSuccess 收到 BuildingData，onError 收到错误信息。
     /// </summary>
