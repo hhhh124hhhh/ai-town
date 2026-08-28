@@ -22,6 +22,7 @@ namespace AiTown.EditorTools
         {
             AssetDatabase.Refresh(); // 确保外部改动（贴图/JSON）已导入再开场景
             var scene = EditorSceneManager.OpenScene(MainScenePath, OpenSceneMode.Single);
+            AiTownMinguoAtmosphere.ApplyAll(); // 氛围（天空盒/雾/石板路/树色/暖光）随烘焙一并应用
             BakeCurrentScene();
             EditorSceneManager.SaveScene(scene);
             AssetDatabase.SaveAssets();

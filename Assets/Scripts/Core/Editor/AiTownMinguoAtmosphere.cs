@@ -262,6 +262,7 @@ namespace AiTown.EditorTools
                     Color c = m.HasProperty("_BaseColor") ? m.GetColor("_BaseColor")
                         : m.HasProperty("_Color") ? m.GetColor("_Color") : Color.white;
                     if (c.b > c.r + 0.05f) { mats[i] = leaf; changed = true; }   // 青蓝→叶
+                    else if (c.g > c.r + 0.03f && c.g > c.b + 0.03f) { mats[i] = leaf; changed = true; } // 绿主导（Kenney 默认）→民国叶色
                     else if (c.r > c.b + 0.05f) { mats[i] = trunk; changed = true; } // 粉红→干
                 }
                 if (changed) { r.sharedMaterials = mats; fixedTrees++; }
