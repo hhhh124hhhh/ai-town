@@ -108,12 +108,12 @@ public class BuildingManager : MonoBehaviour
 
     private void CreateBlock(BlockData block, Transform parent)
     {
-        ShapeFactory.TryParseColor(block.color, out Color color);
+        // hex 入口：走分类贴图材质库（石/木/砖/砂+玻璃/发光）
         GameObject obj = ShapeFactory.Create(
             block.shape,
             ToVector(block.pos),
             ToVector(block.size),
-            color);
+            block.color);
         obj.transform.SetParent(parent, false);
     }
 

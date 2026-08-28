@@ -14,6 +14,12 @@ public static class ShapeFactory
         return Create(shape, pos, size, GetMaterial(color));
     }
 
+    /// <summary>hex 入口（推荐）：走 MaterialLibrary 分类贴图材质（石/木/砖/砂+玻璃/发光）。</summary>
+    public static GameObject Create(string shape, Vector3 pos, Vector3 size, string colorHex)
+    {
+        return Create(shape, pos, size, MaterialLibrary.GetOrCreate(colorHex));
+    }
+
     /// <summary>
     /// 材质重载：编辑器烘焙时传入持久化材质资产，
     /// 保证场景保存后引用不丢（运行时动态创建的内存材质无法被场景序列化）。

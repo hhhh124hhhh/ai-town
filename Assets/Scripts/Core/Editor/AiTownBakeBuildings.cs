@@ -105,8 +105,8 @@ namespace AiTown.EditorTools
 
                 foreach (BlockData block in data.blocks)
                 {
-                    ShapeFactory.TryParseColor(block.color, out Color color);
-                    Material mat = GetOrCreateMaterialAsset(block.color, color);
+                    // hex 直传 → MaterialLibrary 分类贴图材质（烘焙时另存为持久化 .mat）
+                    Material mat = GetOrCreateMaterialAsset(block.color);
                     GameObject obj = ShapeFactory.Create(
                         block.shape,
                         ToVector(block.pos),
@@ -130,7 +130,7 @@ namespace AiTown.EditorTools
         }
 
         /// <summary>同一颜色复用同一个材质资产，避免材质文件数与方块数同阶膨胀。</summary>
-        private static Material GetOrCreateMaterialAsset(string hex, Color color)
+        private static Material GetOrCreateMaterialAsset(string hex)
         {
             string key = string.IsNullOrEmpty(hex) ? "FFFFFF" : hex.TrimStart('#').ToUpperInvariant();
             string path = $"{GeneratedMatsDir}/Block_{key}.mat";
@@ -138,8 +138,8 @@ namespace AiTown.EditorTools
             Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (mat == null)
             {
-                mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-                if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", color);
+                // MaterialLibrary 实例（分类贴图+玻璃/发光分支），落盘为持久化资产
+                mat = MaterialLibrary.CreateMaterialInstance(hex);
                 AssetDatabase.CreateAsset(mat, path);
             }
             return mat;
