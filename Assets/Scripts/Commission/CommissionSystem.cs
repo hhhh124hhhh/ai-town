@@ -233,7 +233,7 @@ public class CommissionSystem : MonoBehaviour
         float w = 320f;
         var rect = new Rect(UiTheme.VW - w - 12f, 12f, w, _state.active != null ? 84f : 56f);
         GUILayout.BeginArea(rect, UiTheme.Hud);
-        UiTheme.Wash(rect, 0.78f);
+        UiTheme.Wash(rect, 0.88f);
         GUILayout.Label($"<b>★{_state.level} {_state.levelName}</b>　繁荣 {_state.prosperity}　大洋 {_state.gold}　完成 {_state.completed} 单", UiTheme.Text(13));
         if (_state.active != null)
         {

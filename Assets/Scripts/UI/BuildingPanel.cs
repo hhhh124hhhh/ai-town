@@ -61,7 +61,7 @@ public class BuildingPanel : MonoBehaviour
         if (!_visible || CinematicIntro.IsCinematic || BuildingPlacement.Active) return;
 
         UiTheme.BeginScale();
-        var areaRect = new Rect(16, 16, 380, 400);
+        var areaRect = new Rect(16, 16, 440, 420); // 440 宽 = 4×80 按钮 + padding 72 + 间距
         GUILayout.BeginArea(areaRect, UiTheme.Panel);
         UiTheme.Wash(areaRect);
         GUILayout.Label("<b>AI 建筑生成</b>  <color=#5A5042>(Tab 隐藏)</color>", UiTheme.Title);

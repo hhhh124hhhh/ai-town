@@ -26,7 +26,7 @@ public static class UiTheme
     // ── 全局缩放（高分屏 IMGUI 字号过小的根治）─────────────────────────
     /// <summary>GUI 全局缩放：1080p≈1.2、1440p≈1.6、720p=1。IMGUI 字号不随分辨率变，
     /// 2K/4K 下 12px 字小到不可读，统一按渲染高度放大整套 UI。</summary>
-    public static float Scale => Mathf.Clamp(Screen.height / 900f, 1f, 2.2f);
+    public static float Scale => Mathf.Clamp(Screen.height / 840f, 1f, 2.2f);
     /// <summary>缩放后坐标系里的虚拟屏宽（布局定位一律用它，别直接用 Screen.width）。</summary>
     public static float VW => Screen.width / Scale;
     /// <summary>缩放后坐标系里的虚拟屏高。</summary>
@@ -68,7 +68,7 @@ public static class UiTheme
     /// 指定字号的墨色正文（按字号缓存）。IMGUI 的 GUI.skin.label 默认白字，
     /// 压宣纸底会隐形——面板内容文字一律用本方法，禁止裸 new GUIStyle(GUI.skin.label)。
     /// </summary>
-    public static GUIStyle Text(int size = 14)
+    public static GUIStyle Text(int size = 16)
     {
         EnsureStyles();
         if (_textCache.TryGetValue(size, out var s)) return s;
@@ -111,41 +111,46 @@ public static class UiTheme
         var border16 = new RectOffset(28, 28, 28, 28);
         var border12 = new RectOffset(12, 12, 12, 12);
 
-        // 内边距须大于木框在屏上的实际厚度（约 30px），否则文字压在深色木纹上看不清
-        _panelBox = MakeBox(_panel != null ? _panel : _solidPaper, border24, 26,
-            Ink, 14);
+        // 内边距必须大于木框在屏上的实际厚度（约 32px），且 ≥1 字高——否则文字压木纹上看不清
+        _panelBox = MakeBox(_panel != null ? _panel : _solidPaper, border24, 36,
+            Ink, 15);
         _hudBox = MakeBox(_hud != null ? _hud : _solidPaper, border16, 16,
-            Ink, 13);
-        _cardBox = MakeBox(_card != null ? _card : _solidPaper, border12, 12,
-            Ink, 13);
+            Ink, 14);
+        _cardBox = MakeBox(_card != null ? _card : _solidPaper, border12, 18,
+            Ink, 14);
 
         _btnStyle = MakeButton(_btn, _btnHover, _btnActive, border12,
-            Ink, 14);
+            Ink, 16);
         _btnPrimary = MakeButton(_btnRed != null ? _btnRed : _solidRed, null, null, border12,
-            Paper, 14);
+            Paper, 16);
 
         _title = new GUIStyle(GUI.skin.label)
         {
             fontStyle = FontStyle.Bold,
-            fontSize = 16,
+            fontSize = 20,
         };
         _title.normal.textColor = Ink;
 
-        _body = new GUIStyle(GUI.skin.label) { richText = true, fontSize = 14 };
+        _body = new GUIStyle(GUI.skin.label) { richText = true, fontSize = 16 };
         _body.normal.textColor = Ink;
 
-        _hint = new GUIStyle(GUI.skin.label) { richText = true, fontSize = 12 };
+        _hint = new GUIStyle(GUI.skin.label) { richText = true, fontSize = 14 };
         _hint.normal.textColor = InkSoft;
 
         _field = new GUIStyle(GUI.skin.textField);
-        _field.normal.background = BorderedPaper();
-        _field.focused.background = BorderedPaper();
-        _field.hover.background = BorderedPaper();
-        _field.active.background = BorderedPaper();
-        _field.border = new RectOffset(2, 2, 2, 2); // 描边 2px 不参与拉伸
+        // 输入框底用内置 whiteTexture（运行时自建贴图在团结下会失效跌回深色默认皮肤）
+        _field.normal.background = Texture2D.whiteTexture;
+        _field.focused.background = Texture2D.whiteTexture;
+        _field.hover.background = Texture2D.whiteTexture;
+        _field.active.background = Texture2D.whiteTexture;
+        _field.border = new RectOffset(2, 2, 2, 2);
         _field.normal.textColor = Ink;
         _field.focused.textColor = Ink;
-        _field.fontSize = 14;
+        // IMGUI 状态优先级 active > hover > focused：点击/悬停输入框走 hover/active 态，
+        // 不覆盖的话会落回默认皮肤白字，压宣纸底看不清
+        _field.hover.textColor = Ink;
+        _field.active.textColor = Ink;
+        _field.fontSize = 16;
     }
 
     private static GUIStyle MakeBox(Texture2D bg, RectOffset border, int padding, Color textColor, int fontSize)
@@ -183,13 +188,14 @@ public static class UiTheme
     /// <summary>
     /// 宣纸衬底：BeginArea(style) 后立刻调用，用半透明宣纸盖住面板贴图内侧的
     /// 装饰纹理（设计稿残影），深色文字不再压在木框/花纹上。alpha 越大越素净。
+    /// 用内置 whiteTexture+GUI.color 染色：运行时 new 的 Texture2D 在团结引擎下会被
+    /// 置空（实测 Wash 报 null texture），内置贴图永不失效。
     /// </summary>
-    public static void Wash(Rect areaRect, float alpha = 0.72f)
+    public static void Wash(Rect areaRect, float alpha = 0.88f)
     {
-        EnsureLoaded();
         var prev = GUI.color;
-        GUI.color = new Color(1f, 1f, 1f, alpha);
-        GUI.DrawTexture(new Rect(0f, 0f, areaRect.width, areaRect.height), _solidPaper);
+        GUI.color = new Color(0.94f, 0.89f, 0.80f, alpha); // 宣纸色
+        GUI.DrawTexture(new Rect(0f, 0f, areaRect.width, areaRect.height), Texture2D.whiteTexture);
         GUI.color = prev;
     }
 
@@ -201,29 +207,6 @@ public static class UiTheme
         for (int i = 0; i < 16; i++) px[i] = c;
         t.SetPixels(px);
         t.Apply(false, true);
-        return t;
-    }
-
-    private static Texture2D _borderedPaper;
-    /// <summary>墨框宣纸底（输入框用）：32x32，2px 墨色描边 + 宣纸内部。</summary>
-    private static Texture2D BorderedPaper()
-    {
-        if (_borderedPaper != null) return _borderedPaper;
-        const int size = 32;
-        var t = new Texture2D(size, size, TextureFormat.RGBA32, false);
-        t.name = "UiThemeBorderedPaper";
-        var px = new Color[size * size];
-        for (int y = 0; y < size; y++)
-        {
-            for (int x = 0; x < size; x++)
-            {
-                bool edge = x < 2 || y < 2 || x >= size - 2 || y >= size - 2;
-                px[y * size + x] = edge ? Ink : Paper;
-            }
-        }
-        t.SetPixels(px);
-        t.Apply(false, true);
-        _borderedPaper = t;
         return t;
     }
 }
