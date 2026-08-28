@@ -1,0 +1,41 @@
+﻿{
+  "meta": {
+    "name": "ai-town 民国小镇",
+    "cell": 5,
+    "bounds": { "xmin": -25, "xmax": 30, "zmin": -30, "zmax": 10 },
+    "note": "世界坐标真源。roads/districts 的 rect=[xmin,xmax,zmin,zmax]。所有摆放器与校验器只认此文件。"
+  },
+  "roads": [
+    { "name": "Road_Main", "district": "core_plaza",       "root": "_Roads", "x": 0,    "z": -7,    "w": 4,   "l": 10,  "style": "minguo_stone", "y": 0.02 },
+    { "name": "Plaza_Main", "district": "core_plaza",      "root": "_Roads", "x": 0,    "z": -6,    "w": 14,  "l": 12,  "style": "minguo_stone", "y": 0.015 },
+    { "name": "Road_GateApron", "district": "core_plaza",  "root": "_Roads", "x": 0,    "z": 1.1,   "w": 8,   "l": 2.2, "style": "minguo_stone", "y": 0.03 },
+    { "name": "Road_West_A", "district": "west_lane",     "root": "_Roads", "x": -11,  "z": 1.8,   "w": 2,   "l": 8,   "style": "minguo_stone", "y": 0.03 },
+    { "name": "Road_West_B", "district": "west_lane",     "root": "_Roads", "x": -8.4, "z": -1.1,  "w": 3.2, "l": 2.2, "style": "minguo_stone", "y": 0.03 },
+    { "name": "Road_Hut_Pad", "district": "west_lane",    "root": "_Roads", "x": -3.75,"z": 0.7,   "w": 2.5, "l": 1.5, "style": "minguo_stone", "y": 0.03 },
+    { "name": "Road_Qilou_EW", "district": "qilou_street",   "root": "_Roads", "x": 14,   "z": -13,   "w": 24,  "l": 3,   "style": "minguo_stone", "y": 0.03 },
+    { "name": "Road_Qilou_NS", "district": "ns_street",   "root": "_Roads", "x": 8.5,  "z": -6,    "w": 3,   "l": 11,  "style": "minguo_stone", "y": 0.03 },
+    { "name": "Road_East_Square", "district": "market_east","root": "_Roads", "x": 22.5, "z": -8.5,  "w": 6,   "l": 6,   "style": "minguo_stone", "y": 0.03 },
+    { "name": "Road_South", "district": "south_road",      "root": "_Roads", "x": 0,    "z": -16,   "w": 3,   "l": 8,   "style": "dirt",         "y": 0.03 },
+    { "name": "Path", "district": "south_road",            "root": "_River/Path_To_Road", "x": 0, "z": -16, "w": 8, "l": 8, "style": "minguo_stone", "y": 0.02,
+      "note": "河流系统桥头引路（曾漏检，务必保留）" }
+  ],
+  "districts": [
+    { "name": "core_plaza",      "rect": [-7.5, 7.0, -12.5, 5.5],   "allow": ["furniture", "lamp", "flag", "well", "fire", "cart", "crate", "building"], "note": "广场：家具灯旗合法，树禁入" },
+    { "name": "market_east",     "rect": [14.0, 25.5, -12.0, -5.0], "allow": ["furniture", "crate", "lamp", "flag", "cart", "building"], "note": "东货栈市集" },
+    { "name": "qilou_street",    "rect": [0.0, 27.5, -15.5, -9.5],  "allow": ["lamp", "flag", "building"], "note": "骑楼街带（两岸），街上禁物" },
+    { "name": "ns_street",       "rect": [6.5, 10.5, -12.0, 1.0],   "allow": ["lamp", "building"], "note": "NS 竖街" },
+    { "name": "south_road",      "rect": [-2.5, 2.5, -21.0, -12.0], "allow": ["fence", "lamp", "paifang"], "note": "出镇土路+引路" },
+    { "name": "west_lane",       "rect": [-6.5, -2.0, -1.5, 5.5],   "allow": ["lamp", "fence", "building"], "note": "西巷" },
+    { "name": "grass",           "rect": [-25, 30, -30, -12],       "allow": ["tree", "fence", "building"], "note": "镇南荒地默认区" },
+    { "name": "spawn_safe",      "rect": [-4, 4, -9.6, -1.6],       "allow": [], "note": "出生点安全区（绕 SpawnPoint 4m），禁一切道具" }
+  ],
+  "props_manifest": ".codely/props_manifest.json",
+  "buildings_dir": "Assets/StreamingAssets/Buildings",
+  "lint": {
+    "roadMargin": 0.5,
+    "spawnRadius": 4.0,
+    "propSpacing": 1.2,
+    "buildingPad": 0.3,
+    "reportTag": "[PlacementLint]"
+  }
+}
