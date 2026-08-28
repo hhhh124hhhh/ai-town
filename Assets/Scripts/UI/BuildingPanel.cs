@@ -29,10 +29,16 @@ public class BuildingPanel : MonoBehaviour
     {
         var player = GameObject.Find("Player");
         if (player != null) _player = player.transform;
+
+        // 委托系统懒创建（HUD + C 面板），场景无需手动接线
+        CommissionSystem.EnsureExists();
+        // 开场演出懒创建（接管相机与输入，结束后自毁）
+        CinematicIntro.EnsureExists();
     }
 
     private void Update()
     {
+        if (CinematicIntro.IsCinematic || CinematicIntro.InputCooldown) return; // 演出期间/开始键那一帧不响应 Tab/回车
 #if ENABLE_INPUT_SYSTEM
         var kb = UnityEngine.InputSystem.Keyboard.current;
         if (kb != null && kb.tabKey.wasPressedThisFrame) _visible = !_visible;
@@ -48,21 +54,21 @@ public class BuildingPanel : MonoBehaviour
 
     private void OnGUI()
     {
-        if (!_visible) return;
+        if (!_visible || CinematicIntro.IsCinematic) return;
 
-        GUILayout.BeginArea(new Rect(16, 16, 360, 300), GUI.skin.box);
-        GUILayout.Label("<b>AI 建筑生成</b>  <color=#888>(Tab 隐藏)</color>");
+        GUILayout.BeginArea(new Rect(16, 16, 360, 300), UiTheme.Panel);
+        GUILayout.Label("<b>AI 建筑生成</b>  <color=#888>(Tab 隐藏)</color>", UiTheme.Title);
 
-        _input = GUILayout.TextField(_input);
+        _input = GUILayout.TextField(_input, UiTheme.Field);
 
         GUI.enabled = !_busy;
-        if (GUILayout.Button("生成（自然语言）"))
+        if (GUILayout.Button("生成（自然语言）", UiTheme.BtnPrimary))
         {
             StartCoroutine(GenerateCo(_input, null));
         }
 
         GUILayout.Space(4);
-        GUILayout.Label("模板快速生成：");
+        GUILayout.Label("模板快速生成：", UiTheme.Hint);
         _scroll = GUILayout.BeginScrollView(_scroll, GUILayout.Height(90));
         int columns = 4;
         int rows = Mathf.CeilToInt(Templates.Length / (float)columns);
@@ -74,7 +80,9 @@ public class BuildingPanel : MonoBehaviour
             {
                 int idx = r * columns + c;
                 if (idx >= Templates.Length) break;
-                if (GUILayout.Button(Templates[idx], GUILayout.Width(80)))
+                bool unlocked = CommissionSystem.IsTemplateUnlocked(Templates[idx]);
+                GUI.enabled = !_busy && unlocked;
+                if (GUILayout.Button(unlocked ? Templates[idx] : "🔒" + Templates[idx], UiTheme.Btn, GUILayout.Width(80)))
                 {
                     selected = idx;
                 }
@@ -82,12 +90,13 @@ public class BuildingPanel : MonoBehaviour
             GUILayout.EndHorizontal();
         }
         GUILayout.EndScrollView();
+        GUI.enabled = !_busy;
         if (selected >= 0)
         {
             StartCoroutine(GenerateCo(null, Templates[selected]));
         }
 
-        if (GUILayout.Button("清除全部建筑"))
+        if (GUILayout.Button("清除全部建筑", UiTheme.Btn))
         {
             if (BuildingManager.Instance != null)
             {
@@ -99,7 +108,7 @@ public class BuildingPanel : MonoBehaviour
 
         if (!string.IsNullOrEmpty(_status))
         {
-            GUILayout.Label(_status);
+            GUILayout.Label(_status, UiTheme.Body);
         }
         GUILayout.EndArea();
     }
@@ -143,6 +152,13 @@ public class BuildingPanel : MonoBehaviour
             {
                 PlaceInFrontOfPlayer(building.transform);
                 _status = $"<color=green>已生成「{result.name}」{result.blocks.Length} 块</color>";
+
+                // 委托系统登记：验收时上报（服务端多建筑取最优匹配）
+                if (CommissionSystem.Instance != null)
+                {
+                    CommissionSystem.Instance.RegisterBuild(
+                        result.name, description, template, result.blocks.Length, building.transform);
+                }
             }
             else
             {

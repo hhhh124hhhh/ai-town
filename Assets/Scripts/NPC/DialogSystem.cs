@@ -100,14 +100,14 @@ public class DialogSystem : MonoBehaviour
         float h = 220f;
         var rect = new Rect((Screen.width - w) / 2f, Screen.height - h - 40f, w, h);
 
-        GUILayout.BeginArea(rect, GUI.skin.box);
-        GUILayout.Label($"<b>与 {Target.npcName}（{Target.roleName}）对话</b>   <color=#888>[Esc 关闭]</color>");
-        GUILayout.Label("<color=#888><b>[1]</b> 你是谁　<b>[2]</b> 城堡故事　<b>[3]</b> 我刚才问了什么　（或直接输入）</color>", new GUIStyle(GUI.skin.label) { fontSize = 11 });
+        GUILayout.BeginArea(rect, UiTheme.Panel);
+        GUILayout.Label($"<b>与 {Target.npcName}（{Target.roleName}）对话</b>   <color=#888>[Esc 关闭]</color>", UiTheme.Title);
+        GUILayout.Label("<color=#888><b>[1]</b> 你是谁　<b>[2]</b> 城堡故事　<b>[3]</b> 我刚才问了什么　（或直接输入）</color>", UiTheme.Hint);
 
         _scroll = GUILayout.BeginScrollView(_scroll, GUILayout.Height(h - 92));
         foreach (string line in _history)
         {
-            GUILayout.Label(line, new GUIStyle(GUI.skin.label) { wordWrap = true, richText = true });
+            GUILayout.Label(line, new GUIStyle(UiTheme.Body) { wordWrap = true });
         }
         if (_waitingReply)
         {
@@ -117,7 +117,7 @@ public class DialogSystem : MonoBehaviour
 
         GUILayout.BeginHorizontal();
         GUI.SetNextControlName(_controlName);
-        _input = GUILayout.TextField(_input, GUILayout.Width(w - 96));
+        _input = GUILayout.TextField(_input, UiTheme.Field, GUILayout.Width(w - 96));
 
         if (_focusInputNext)
         {
@@ -125,7 +125,7 @@ public class DialogSystem : MonoBehaviour
             _focusInputNext = false;
         }
 
-        if (GUILayout.Button("发送", GUILayout.Width(80)) && !_waitingReply && !string.IsNullOrWhiteSpace(_input))
+        if (GUILayout.Button("发送", UiTheme.BtnPrimary, GUILayout.Width(80)) && !_waitingReply && !string.IsNullOrWhiteSpace(_input))
         {
             StartCoroutine(SendCo(_input));
             _input = "";

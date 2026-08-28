@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 /// <summary>
@@ -10,12 +11,15 @@ public class NPCController : MonoBehaviour
     public string npcName = "镇民";
     public string roleName = "镇民";
     public Color bodyColor = new Color(0.9f, 0.7f, 0.3f);
+    [Tooltip("true=运行时生成占位胶囊；false=复用子物体里的现成模型（如 AI 生成的 FBX）")]
+    public bool usePlaceholderBody = true;
 
     [Header("交互")]
     public float interactRange = 3f;
 
     private Transform _player;
     private Transform _head;
+    private Renderer _modelRenderer;
     private bool _playerNearby;
     private string _bubbleText = "";
     private float _bubbleUntil;
@@ -26,7 +30,33 @@ public class NPCController : MonoBehaviour
     private void Awake()
     {
         _player = GameObject.Find("Player")?.transform;
-        BuildBody();
+        if (usePlaceholderBody) BuildBody();
+        else BindExistingModel();
+    }
+
+    /// <summary>现成模型模式：不生成占位外形，取最高处网格顶端做名牌锚点，并挂待机微动。</summary>
+    private void BindExistingModel()
+    {
+        foreach (var r in GetComponentsInChildren<Renderer>())
+        {
+            if (_modelRenderer == null || r.bounds.max.y > _modelRenderer.bounds.max.y)
+                _modelRenderer = r;
+        }
+        if (_modelRenderer != null && _modelRenderer.GetComponent<NpcIdleMotion>() == null)
+            _modelRenderer.gameObject.AddComponent<NpcIdleMotion>();
+        StartCoroutine(BindHeadAnchor());
+    }
+
+    private IEnumerator BindHeadAnchor()
+    {
+        yield return null; // 等一帧，Renderer.bounds 才反映真实世界包围盒
+        if (_modelRenderer == null) yield break;
+
+        var head = new GameObject("Head");
+        head.transform.SetParent(transform, false);
+        head.transform.position = new Vector3(
+            transform.position.x, _modelRenderer.bounds.max.y, transform.position.z);
+        _head = head.transform;
     }
 
     /// <summary>占位外形：胶囊身体 + 球头。编辑态场景里只需挂本组件的空物体。</summary>
@@ -74,7 +104,8 @@ public class NPCController : MonoBehaviour
 
 #if ENABLE_INPUT_SYSTEM
         var kb = UnityEngine.InputSystem.Keyboard.current;
-        if (kb != null && kb.eKey.wasPressedThisFrame && _playerNearby)
+        if (kb != null && kb.eKey.wasPressedThisFrame && _playerNearby
+            && !CinematicIntro.IsCinematic && !CinematicIntro.InputCooldown)
         {
             if (DialogSystem.Instance == null)
             {

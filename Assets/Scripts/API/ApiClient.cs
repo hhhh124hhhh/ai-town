@@ -109,6 +109,103 @@ public class ApiClient : MonoBehaviour
         yield return Generate(description, null, onSuccess, onError);
     }
 
+    // ── 委托系统（JSON 原样透传，DTO 由 CommissionSystem 解析）──────────
+
+    /// <summary>开场白（LLM 现场生成）。onLine 收到一句话。</summary>
+    public IEnumerator GetIntroLine(Action<string> onLine, Action<string> onError)
+    {
+        using (var request = new UnityWebRequest($"{baseUrl}/api/intro/line", "GET"))
+        {
+            request.downloadHandler = new DownloadHandlerBuffer();
+            request.timeout = Mathf.CeilToInt(timeoutSeconds);
+            yield return request.SendWebRequest();
+            if (request.result != UnityWebRequest.Result.Success)
+            {
+                onError?.Invoke($"网络错误: {request.error}");
+                yield break;
+            }
+            try
+            {
+                var resp = JsonUtility.FromJson<IntroLineResponse>(request.downloadHandler.text);
+                if (resp != null && !string.IsNullOrEmpty(resp.line)) onLine?.Invoke(resp.line);
+                else onError?.Invoke("空响应");
+            }
+            catch (Exception e)
+            {
+                onError?.Invoke($"解析失败: {e.Message}");
+            }
+        }
+    }
+
+    [Serializable]
+    private class IntroLineResponse
+    {
+        public string line;
+    }
+
+    /// <summary>拉取委托进度总览。</summary>
+    public IEnumerator GetCommissionState(Action<string> onJson, Action<string> onError)
+    {
+        using (var request = new UnityWebRequest($"{baseUrl}/api/commission/state", "GET"))
+        {
+            request.downloadHandler = new DownloadHandlerBuffer();
+            request.timeout = Mathf.CeilToInt(timeoutSeconds);
+            yield return request.SendWebRequest();
+            if (request.result != UnityWebRequest.Result.Success)
+            {
+                onError?.Invoke($"网络错误: {request.error}");
+                yield break;
+            }
+            onJson?.Invoke(request.downloadHandler.text);
+        }
+    }
+
+    /// <summary>向 NPC 请求委托。npcPos 为 NPC 世界坐标（服务端用作验收区圆心）。</summary>
+    public IEnumerator RequestCommission(string npcName, Vector3 npcPos, Action<string> onJson, Action<string> onError)
+    {
+        var req = new CommissionNewRequest { npc = npcName, npcPos = new[] { npcPos.x, npcPos.y, npcPos.z } };
+        // 发单含 LLM 话术生成，超时放宽
+        yield return PostJson("/api/commission/new", JsonUtility.ToJson(req), 65f, onJson, onError);
+    }
+
+    /// <summary>提交验收。buildsJson 由 CommissionSystem 组装。</summary>
+    public IEnumerator SubmitCommission(string buildsJson, Action<string> onJson, Action<string> onError)
+    {
+        yield return PostJson("/api/commission/submit", buildsJson, 65f, onJson, onError);
+    }
+
+    /// <summary>放弃当前委托。</summary>
+    public IEnumerator AbandonCommission(Action<string> onJson, Action<string> onError)
+    {
+        yield return PostJson("/api/commission/abandon", "{}", timeoutSeconds, onJson, onError);
+    }
+
+    private IEnumerator PostJson(string path, string bodyJson, float timeout, Action<string> onJson, Action<string> onError)
+    {
+        using (var request = new UnityWebRequest(baseUrl + path, "POST"))
+        {
+            byte[] body = Encoding.UTF8.GetBytes(bodyJson);
+            request.uploadHandler = new UploadHandlerRaw(body);
+            request.downloadHandler = new DownloadHandlerBuffer();
+            request.SetRequestHeader("Content-Type", "application/json");
+            request.timeout = Mathf.CeilToInt(timeout);
+            yield return request.SendWebRequest();
+            if (request.result != UnityWebRequest.Result.Success)
+            {
+                onError?.Invoke($"网络错误: {request.error}");
+                yield break;
+            }
+            onJson?.Invoke(request.downloadHandler.text);
+        }
+    }
+
+    [Serializable]
+    private class CommissionNewRequest
+    {
+        public string npc;
+        public float[] npcPos;
+    }
+
     /// <summary>模板直出模式（秒回，不走 NLP）。</summary>
     public IEnumerator GenerateByTemplate(string template, Action<BuildingData> onSuccess, Action<string> onError)
     {
