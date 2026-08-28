@@ -24,13 +24,16 @@ namespace AiTown.EditorTools
         private static readonly Color SunColor = new Color(1.00f, 0.72f, 0.48f);
         private const float SunIntensity = 1.35f;
 
-        // 路灯点光：暖黄钠灯
+        // 路灯点光：暖黄钠灯（黄昏环境光弱，强度需够高光池才可见）
         private static readonly Color LampColor = new Color(1.00f, 0.80f, 0.52f);
-        private const float LampIntensity = 2.6f;
-        private const float LampRange = 9f;
+        private const float LampIntensity = 5.5f;
+        private const float LampRange = 10f;
 
-        // 黄昏雾：暖灰橙（替代白天青灰）
+        // 黄昏雾：暖灰橙（替代白天青灰）；起点推远，镇中心不被雾洗白
         private static readonly Color DuskFog = new Color(0.83f, 0.70f, 0.58f);
+        private static readonly Color DuskSkyTint = new Color(1.00f, 0.78f, 0.58f);
+        private const float FogStart = 28f;
+        private const float FogEnd = 85f;
 
         [MenuItem("Tools/AI Town/Apply Dusk Lighting")]
         public static void Apply()
@@ -115,12 +118,22 @@ namespace AiTown.EditorTools
 
         private static void ApplySkyAndFog()
         {
-            // 天空盒压暗降曝，云层出黄昏金边
-            if (RenderSettings.skybox != null && RenderSettings.skybox.HasProperty("_Exposure"))
-                RenderSettings.skybox.SetFloat("_Exposure", 0.72f);
+            // 天空盒压暗降曝+暖色调，灰云染成晚霞
+            if (RenderSettings.skybox != null)
+            {
+                if (RenderSettings.skybox.HasProperty("_Exposure"))
+                    RenderSettings.skybox.SetFloat("_Exposure", 0.72f);
+                if (RenderSettings.skybox.HasProperty("_Tint"))
+                    RenderSettings.skybox.SetColor("_Tint", DuskSkyTint);
+            }
             EditorUtility.SetDirty(RenderSettings.skybox);
 
+            // 线性雾 28-85m：只给地平线留暖雾带，镇中心保持清晰
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.Linear;
             RenderSettings.fogColor = DuskFog;
+            RenderSettings.fogStartDistance = FogStart;
+            RenderSettings.fogEndDistance = FogEnd;
         }
 
         private static void ApplyVolumeProfile()
