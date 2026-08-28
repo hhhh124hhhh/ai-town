@@ -33,13 +33,8 @@ namespace StarterAssets
 			if (!m_FocusActionsSetUp)
 			{
 #if UNITY_EDITOR
-				var ignoreInput = new InputAction(binding: "/Keyboard/escape");
-				ignoreInput.performed += context => m_IgnoreInput = true;
-				ignoreInput.Enable();
-
-				var enableInput = new InputAction(binding: "/Mouse/leftButton");
-				enableInput.performed += context => m_IgnoreInput = false;
-				enableInput.Enable();
+				// 右键视角模式（MouseLookGate）：指针常驻自由，Esc/左键的
+				// ignoreInput 开关不再有意义，按 Esc 不应锁死移动与视角。
 #endif
 				
 				var touchFocus = new InputAction(binding: "<pointer>/press");

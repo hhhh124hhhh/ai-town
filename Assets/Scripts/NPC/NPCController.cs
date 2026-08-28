@@ -95,7 +95,8 @@ public class NPCController : MonoBehaviour
         float dist = Vector3.Distance(transform.position, _player.position);
         _playerNearby = dist <= interactRange;
 
-        if (_playerNearby && !_playerNearbyPrev && DialogSystem.Instance == null)
+        if (_playerNearby && !_playerNearbyPrev && DialogSystem.Instance == null
+            && !CinematicIntro.IsCinematic) // 开场演出期间不冒问候气泡
         {
             // 首次进入范围时头顶冒一句问候气泡
             ShowBubble($"{npcName}（{roleName}）");
@@ -105,7 +106,8 @@ public class NPCController : MonoBehaviour
 #if ENABLE_INPUT_SYSTEM
         var kb = UnityEngine.InputSystem.Keyboard.current;
         if (kb != null && kb.eKey.wasPressedThisFrame && _playerNearby
-            && !CinematicIntro.IsCinematic && !CinematicIntro.InputCooldown)
+            && !CinematicIntro.IsCinematic && !CinematicIntro.InputCooldown
+            && !BuildingPlacement.Active)
         {
             if (DialogSystem.Instance == null)
             {
@@ -124,30 +126,35 @@ public class NPCController : MonoBehaviour
     /// <summary>头顶气泡显示一句话，持续 seconds 秒。</summary>
     public void ShowBubble(string text, float seconds = 6f)
     {
+        AudioManager.Play("SFX_Bubble", 0.5f);
         _bubbleText = text;
         _bubbleUntil = Time.unscaledTime + seconds;
     }
 
     private void OnGUI()
     {
-        if (_head == null) return;
+        if (_head == null || CinematicIntro.IsCinematic) return; // 演出期（含"按任意键开始"定格）不显示名牌/对话提示
 
         Vector3 world = _head.position + Vector3.up * 0.6f;
         Vector3 screen = Camera.main != null ? Camera.main.WorldToScreenPoint(world) : Vector3.zero;
         if (screen.z <= 0f) return; // 在相机背后
 
-        float x = screen.x;
-        float y = Screen.height - screen.y; // GUI 坐标系 y 向下
+        UiTheme.BeginScale();
+        float x = screen.x / UiTheme.Scale;
+        float y = UiTheme.VH - screen.y / UiTheme.Scale; // GUI 坐标系 y 向下（缩放坐标系）
 
-        // 名牌（常显）
+        // 名牌（常显，黑描边保证亮背景下可读）
         var labelStyle = new GUIStyle(GUI.skin.label)
         {
             alignment = TextAnchor.MiddleCenter,
-            fontSize = 14,
+            fontSize = 15,
+            richText = true,
             normal = { textColor = Color.white },
         };
+        var shadowStyle = new GUIStyle(labelStyle) { normal = { textColor = new Color(0f, 0f, 0f, 0.85f) } };
         string label = _playerNearby ? $"{npcName}  <b>[E] 对话</b>" : npcName;
-        GUI.Label(new Rect(x - 90, y - 22, 180, 24), label, labelStyle);
+        GUI.Label(new Rect(x - 92 + 1.5f, y - 22 + 1.5f, 180, 24), label, shadowStyle);
+        GUI.Label(new Rect(x - 92, y - 22, 180, 24), label, labelStyle);
 
         // 聊天气泡（限时）
         if (!string.IsNullOrEmpty(_bubbleText) && Time.unscaledTime < _bubbleUntil)
@@ -155,7 +162,7 @@ public class NPCController : MonoBehaviour
             var bubbleStyle = new GUIStyle(GUI.skin.box)
             {
                 alignment = TextAnchor.UpperCenter,
-                fontSize = 13,
+                fontSize = 14,
                 wordWrap = true,
                 normal = { textColor = new Color(1f, 1f, 0.85f) },
                 stretchWidth = false,
@@ -169,6 +176,8 @@ public class NPCController : MonoBehaviour
         {
             _bubbleText = "";
         }
+
+        UiTheme.EndScale();
     }
 }
 

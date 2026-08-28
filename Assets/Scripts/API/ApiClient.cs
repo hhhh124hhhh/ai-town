@@ -13,7 +13,7 @@ public class ApiClient : MonoBehaviour
     [Tooltip("Python ai_town_server.py 的地址")]
     public string baseUrl = "http://127.0.0.1:8765";
 
-    [Tooltip("请求超时（秒）")]
+    [Tooltip("请求超时（秒）。LLM 类接口（对话/委托/开场白）固定用 65s，不随此值。")]
     public float timeoutSeconds = 15f;
 
     public static ApiClient Instance { get; private set; }
@@ -57,7 +57,8 @@ public class ApiClient : MonoBehaviour
         public string error;
     }
 
-    /// <summary>与 NPC 对话。onReply 收到回复文本，onError 收到错误信息。</summary>
+    /// <summary>与 NPC 对话。onReply 收到回复文本，onError 收到错误信息。
+    /// LLM 生成可能要 60s+，固定 65s 超时（15s 会假失败）。</summary>
     public IEnumerator ChatWithNPC(string npcName, string message, Action<string> onReply, Action<string> onError)
     {
         var req = new NpcChatRequest { name = npcName, message = message };
@@ -69,7 +70,7 @@ public class ApiClient : MonoBehaviour
             request.uploadHandler = new UploadHandlerRaw(body);
             request.downloadHandler = new DownloadHandlerBuffer();
             request.SetRequestHeader("Content-Type", "application/json");
-            request.timeout = Mathf.CeilToInt(timeoutSeconds);
+            request.timeout = 65;
 
             yield return request.SendWebRequest();
 
@@ -117,7 +118,7 @@ public class ApiClient : MonoBehaviour
         using (var request = new UnityWebRequest($"{baseUrl}/api/intro/line", "GET"))
         {
             request.downloadHandler = new DownloadHandlerBuffer();
-            request.timeout = Mathf.CeilToInt(timeoutSeconds);
+            request.timeout = 65;
             yield return request.SendWebRequest();
             if (request.result != UnityWebRequest.Result.Success)
             {

@@ -105,6 +105,7 @@ public class CommissionSystem : MonoBehaviour
     private class BuildsRequest
     {
         public BuildEntry[] builds;
+        public float[] zoneCenter;   // 最近一次放置落点 XZ（服务端绿圈判分跟随）
     }
 
     private class BuildRecord
@@ -171,7 +172,8 @@ public class CommissionSystem : MonoBehaviour
         if (!CinematicIntro.IsCinematic && !CinematicIntro.InputCooldown)
         {
             var kb = UnityEngine.InputSystem.Keyboard.current;
-            if (kb != null && kb.cKey.wasPressedThisFrame && DialogSystem.Instance == null)
+            if (kb != null && kb.cKey.wasPressedThisFrame && DialogSystem.Instance == null
+                && !BuildingPlacement.Active)
             {
                 if (_panelVisible) RefreshNpcCache(); // 面板里可能新增了 NPC
                 _panelVisible = !_panelVisible;
@@ -214,6 +216,7 @@ public class CommissionSystem : MonoBehaviour
     {
         if (CinematicIntro.IsCinematic) return; // 开场演出期间 HUD/面板不显示
 
+        UiTheme.BeginScale();
         DrawFlash();
 
         if (!_offline && _fetched) DrawHud();
@@ -222,17 +225,19 @@ public class CommissionSystem : MonoBehaviour
         {
             DrawPanel();
         }
+        UiTheme.EndScale();
     }
 
     private void DrawHud()
     {
-        float w = 300f;
-        var rect = new Rect(Screen.width - w - 12f, 12f, w, _state.active != null ? 64f : 40f);
+        float w = 320f;
+        var rect = new Rect(UiTheme.VW - w - 12f, 12f, w, _state.active != null ? 84f : 56f);
         GUILayout.BeginArea(rect, UiTheme.Hud);
-        GUILayout.Label($"<b>★{_state.level} {_state.levelName}</b>　繁荣 {_state.prosperity}　金币 {_state.gold}　完成 {_state.completed} 单", new GUIStyle(GUI.skin.label) { richText = true, fontSize = 12 });
+        UiTheme.Wash(rect, 0.78f);
+        GUILayout.Label($"<b>★{_state.level} {_state.levelName}</b>　繁荣 {_state.prosperity}　大洋 {_state.gold}　完成 {_state.completed} 单", UiTheme.Text(13));
         if (_state.active != null)
         {
-            GUILayout.Label($"<color=yellow>委托：{_state.active.npc} · {_state.active.title}</color>（[C] 面板）", new GUIStyle(GUI.skin.label) { richText = true, fontSize = 12 });
+            GUILayout.Label($"<color=#9E2B25><b>委托：{_state.active.npc} · {_state.active.title}</b></color>（[C] 面板）", UiTheme.Text(13));
         }
         GUILayout.EndArea();
     }
@@ -240,19 +245,20 @@ public class CommissionSystem : MonoBehaviour
     private void DrawPanel()
     {
         float w = 420f;
-        float h = Mathf.Min(470f, Screen.height - 110f);
-        var rect = new Rect(Screen.width - w - 12f, 84f, w, h);
+        float h = Mathf.Min(470f, UiTheme.VH - 130f);
+        var rect = new Rect(UiTheme.VW - w - 12f, 104f, w, h);
 
         GUILayout.BeginArea(rect, UiTheme.Panel);
-        GUILayout.Label("<b>委托大厅</b>  <color=#888>[C 关闭]</color>", UiTheme.Title);
+        UiTheme.Wash(rect);
+        GUILayout.Label("<b>委托大厅</b>  <color=#5A5042>[C 关闭]</color>", UiTheme.Title);
         if (_state != null)
         {
-            GUILayout.Label($"★{_state.level} {_state.levelName}　繁荣 {_state.prosperity}　金币 {_state.gold}　完成 {_state.completed} 单", new GUIStyle(GUI.skin.label) { richText = true, fontSize = 12 });
+            GUILayout.Label($"★{_state.level} {_state.levelName}　繁荣 {_state.prosperity}　大洋 {_state.gold}　完成 {_state.completed} 单", UiTheme.Text(13));
             if (_state.npcs != null && _state.npcs.Length > 0)
             {
                 var aff = new System.Text.StringBuilder();
                 foreach (var n in _state.npcs) aff.Append($"{n.name}({n.affinityLabel}) ");
-                GUILayout.Label($"<color=#888>{aff}</color>", new GUIStyle(GUI.skin.label) { richText = true, fontSize = 11 });
+                GUILayout.Label($"<color=#5A5042>{aff}</color>", UiTheme.Text(12));
             }
         }
         GUILayout.Space(6);
@@ -260,15 +266,15 @@ public class CommissionSystem : MonoBehaviour
         var active = _state?.active;
         if (active != null)
         {
-            _scroll = GUILayout.BeginScrollView(_scroll, GUILayout.Height(h - 200f));
-            GUILayout.Label($"<b>「{active.title}」</b>　委托人：{active.npc}　难度 {new string('●', Math.Max(1, active.difficulty))}", new GUIStyle(GUI.skin.label) { richText = true, wordWrap = true });
-            GUILayout.Label(active.desc, new GUIStyle(GUI.skin.label) { wordWrap = true });
+            _scroll = GUILayout.BeginScrollView(_scroll, GUILayout.Height(h - 220f));
+            GUILayout.Label($"<b>「{active.title}」</b>　委托人：{active.npc}　难度 {new string('●', Math.Max(1, active.difficulty))}", UiTheme.Text(14));
+            GUILayout.Label(active.desc, UiTheme.Text(14));
             GUILayout.Space(4);
-            GUILayout.Label("<b>验收要求</b>", new GUIStyle(GUI.skin.label) { fontSize = 12 });
-            GUILayout.Label($"· 建筑类型：<color=yellow>{active.typeLabel}</color>（Tab 面板输入「建一个{active.typeLabel}」或点模板）", new GUIStyle(GUI.skin.label) { richText = true, wordWrap = true, fontSize = 12 });
-            GUILayout.Label($"· 占地 ≥ {active.minSize:0} 米　· 方块 ≥ {active.minBlocks} 个", new GUIStyle(GUI.skin.label) { fontSize = 12 });
-            GUILayout.Label($"· 建在 <color=lime>绿圈</color>内（{active.npc} 附近 {active.zoneRadius:0} 米）", new GUIStyle(GUI.skin.label) { richText = true, fontSize = 12 });
-            GUILayout.Label($"奖励：{active.rewardGold} 金币" + (string.IsNullOrEmpty(active.unlock) ? "" : $" + 解锁模板 <color=orange>{active.unlock}</color>"), new GUIStyle(GUI.skin.label) { richText = true, fontSize = 12 });
+            GUILayout.Label("<b>验收要求</b>", UiTheme.Text(13));
+            GUILayout.Label($"· 建筑类型：<color=#9E2B25>{active.typeLabel}</color>（Tab 面板输入「建一座{active.typeLabel}」或点图纸）", UiTheme.Text(13));
+            GUILayout.Label($"· 占地 ≥ {active.minSize:0} 米　· 方块 ≥ {active.minBlocks} 个", UiTheme.Text(13));
+            GUILayout.Label($"· 建在 <color=#1E7A1E>绿圈</color>内（{active.npc} 附近 {active.zoneRadius:0} 米）", UiTheme.Text(13));
+            GUILayout.Label($"酬劳：{active.rewardGold} 大洋" + (string.IsNullOrEmpty(active.unlock) ? "" : $" + 解锁图纸 <color=#8A5A00>{active.unlock}</color>"), UiTheme.Text(13));
             GUILayout.EndScrollView();
 
             GUI.enabled = !_busy && _builds.Count > 0;
@@ -285,11 +291,11 @@ public class CommissionSystem : MonoBehaviour
         }
         else if (!_busy)
         {
-            GUILayout.Label("当前没有委托。找谁接活？（走到 NPC 附近可 [E] 闲聊打听）", new GUIStyle(GUI.skin.label) { wordWrap = true });
+            GUILayout.Label("当前没有委托。找谁接活？（走到 NPC 附近可 [E] 闲聊打听）", UiTheme.Text(13));
             GUILayout.Space(4);
             if (_npcs.Count == 0)
             {
-                GUILayout.Label("<color=red>场景里没有 NPC（NPCController）</color>", new GUIStyle(GUI.skin.label) { richText = true });
+                GUILayout.Label("<color=red>场景里没有 NPC（NPCController）</color>", UiTheme.Text(13));
             }
             foreach (var npc in _npcs)
             {
@@ -302,12 +308,12 @@ public class CommissionSystem : MonoBehaviour
 
         if (_busy)
         {
-            GUILayout.Label("<i>……正在与 NPC 交谈</i>", new GUIStyle(GUI.skin.label) { normal = { textColor = Color.gray } });
+            GUILayout.Label("<i>……正在与 NPC 交谈</i>", new GUIStyle(GUI.skin.label) { normal = { textColor = UiTheme.InkSoft } });
         }
         if (!string.IsNullOrEmpty(_resultBox))
         {
             GUILayout.Space(4);
-            GUILayout.Box(_resultBox, new GUIStyle(UiTheme.Card) { wordWrap = true, richText = true, fontSize = 12 }, GUILayout.Height(92));
+            GUILayout.Box(_resultBox, new GUIStyle(UiTheme.Card) { wordWrap = true, richText = true, fontSize = 13 }, GUILayout.Height(92));
         }
         if (!string.IsNullOrEmpty(_status))
         {
@@ -370,6 +376,7 @@ public class CommissionSystem : MonoBehaviour
 
         _state = resp.state;
         _builds.Clear();
+        _lastPlacedPos = null; // 新委托未放置前不带上一个委托的落点
         _resultBox = "";
         CreateZoneRing(resp.commission);
         npc.ShowBubble($"委托：{resp.commission.title}（[C] 查看详情）", 8f);
@@ -410,6 +417,10 @@ public class CommissionSystem : MonoBehaviour
         _status = $"{entries.Count} 栋建筑提交验收，{(_state?.active?.npc ?? "NPC")} 正在检查……";
         string json = null, error = null;
         var req = new BuildsRequest { builds = entries.ToArray() };
+        if (_lastPlacedPos.HasValue)
+        {
+            req.zoneCenter = new[] { _lastPlacedPos.Value.x, _lastPlacedPos.Value.z };
+        }
         yield return ApiClient.Instance.SubmitCommission(
             JsonUtility.ToJson(req),
             j => json = j, e => error = e);
@@ -433,7 +444,7 @@ public class CommissionSystem : MonoBehaviour
         if (resp.pass)
         {
             int prevLevel = _levelShown;
-            _resultBox = $"<color=lime><b>验收通过（{resp.grade}）</b></color>\n{resp.comment}\n<color=orange>+{resp.rewardGold} 金币　+{resp.rewardProsperity} 繁荣{(string.IsNullOrEmpty(resp.unlocked) ? "" : $"　解锁：{resp.unlocked}")}</color>";
+            _resultBox = $"<color=#1E7A1E><b>验收通过（{resp.grade}）</b></color>\n{resp.comment}\n<color=#8A5A00>+{resp.rewardGold} 大洋　+{resp.rewardProsperity} 繁荣{(string.IsNullOrEmpty(resp.unlocked) ? "" : $"　解锁图纸：{resp.unlocked}")}</color>";
             DestroyZoneRing();
             _builds.Clear();
             _status = "";
@@ -443,7 +454,7 @@ public class CommissionSystem : MonoBehaviour
         else
         {
             _resultBox = $"<color=red><b>验收未通过</b></color>\n{resp.comment}\n{reasons}";
-            _status = "<color=yellow>按委托要求调整后可再次提交</color>";
+            _status = "<color=#8A5A00>按委托要求调整后可再次提交</color>";
         }
     }
 
@@ -462,6 +473,7 @@ public class CommissionSystem : MonoBehaviour
     /// <summary>验收通过闪现 + 繁荣度升级检测。prevLevel 为提交前展示等级。</summary>
     private void ShowFlash(string grade, int gold, int prosperity, string unlock, int prevLevel)
     {
+        AudioManager.Play("SFX_Gong");
         _flashGrade = grade;
         _flashGold = gold;
         _flashProsperity = prosperity;
@@ -489,13 +501,13 @@ public class CommissionSystem : MonoBehaviour
         var tex = Texture2D.whiteTexture;
         Color prev = GUI.color;
         GUI.color = new Color(0f, 0f, 0f, 0.45f * alpha);
-        GUI.DrawTexture(new Rect(0, Screen.height * 0.30f, Screen.width, Screen.height * 0.30f), tex);
+        GUI.DrawTexture(new Rect(0, UiTheme.VH * 0.30f, UiTheme.VW, UiTheme.VH * 0.30f), tex);
         GUI.color = prev;
 
         bool isS = _flashGrade == "S";
         Color gradeColor = isS ? new Color(1f, 0.82f, 0.25f) : new Color(0.5f, 1f, 0.6f);
 
-        float cx = Screen.width / 2f;
+        float cx = UiTheme.VW / 2f;
         float gradeSize = 110f * scale;
 
         var gradeStyle = new GUIStyle(GUI.skin.label)
@@ -506,8 +518,8 @@ public class CommissionSystem : MonoBehaviour
             normal = { textColor = new Color(gradeColor.r, gradeColor.g, gradeColor.b, alpha) },
         };
         var gs = new GUIStyle(gradeStyle) { normal = { textColor = new Color(0f, 0f, 0f, alpha * 0.8f) } };
-        GUI.Label(new Rect(cx - 60 + 3, Screen.height * 0.31f + 3, 120, 130), _flashGrade, gs);
-        GUI.Label(new Rect(cx - 60, Screen.height * 0.31f, 120, 130), _flashGrade, gradeStyle);
+        GUI.Label(new Rect(cx - 60 + 3, UiTheme.VH * 0.31f + 3, 120, 130), _flashGrade, gs);
+        GUI.Label(new Rect(cx - 60, UiTheme.VH * 0.31f, 120, 130), _flashGrade, gradeStyle);
 
         var titleStyle = new GUIStyle(GUI.skin.label)
         {
@@ -515,7 +527,7 @@ public class CommissionSystem : MonoBehaviour
             alignment = TextAnchor.MiddleCenter,
             normal = { textColor = new Color(1f, 1f, 1f, alpha) },
         };
-        GUI.Label(new Rect(cx - 300, Screen.height * 0.335f + 110, 600, 40), $"交 付 成 功", titleStyle);
+        GUI.Label(new Rect(cx - 300, UiTheme.VH * 0.335f + 110, 600, 40), $"交 付 成 功", titleStyle);
 
         var rewardStyle = new GUIStyle(GUI.skin.label)
         {
@@ -523,9 +535,9 @@ public class CommissionSystem : MonoBehaviour
             alignment = TextAnchor.MiddleCenter,
             normal = { textColor = new Color(1f, 0.85f, 0.5f, alpha) },
         };
-        string unlockTxt = string.IsNullOrEmpty(_flashUnlock) ? "" : $"　·　解锁模板 {_flashUnlock}";
-        GUI.Label(new Rect(cx - 400, Screen.height * 0.335f + 150, 800, 34),
-                  $"＋{_flashGold} 金币　＋{_flashProsperity} 繁荣{unlockTxt}", rewardStyle);
+        string unlockTxt = string.IsNullOrEmpty(_flashUnlock) ? "" : $"　·　解锁图纸 {_flashUnlock}";
+        GUI.Label(new Rect(cx - 400, UiTheme.VH * 0.335f + 150, 800, 34),
+                  $"＋{_flashGold} 大洋　＋{_flashProsperity} 繁荣{unlockTxt}", rewardStyle);
 
         // 繁荣度升级庆祝（叠加在下方）
         if (_levelUpTo > 0 && _state != null)
@@ -537,7 +549,7 @@ public class CommissionSystem : MonoBehaviour
                 fontStyle = FontStyle.Bold,
                 normal = { textColor = new Color(0.6f, 0.95f, 1f, alpha) },
             };
-            GUI.Label(new Rect(cx - 400, Screen.height * 0.335f + 190, 800, 40),
+            GUI.Label(new Rect(cx - 400, UiTheme.VH * 0.335f + 190, 800, 40),
                       $"★★ 小镇升级：{_state.levelName} ★★", lvlStyle);
         }
     }
@@ -601,6 +613,40 @@ public class CommissionSystem : MonoBehaviour
             lr.SetPosition(i, new Vector3(c.zoneX + Mathf.Cos(a) * c.zoneRadius, 0.25f, c.zoneZ + Mathf.Sin(a) * c.zoneRadius));
         }
         _zoneRing = lr;
+    }
+
+    // ── 放置系统对接（BuildingPlacement 调用）──────────────────────────
+    private Vector3? _lastPlacedPos;   // 最近一次建筑落点（XZ 上报服务端）
+
+    /// <summary>建筑放置确认后调用：绿圈圆心跟随建筑落位。</summary>
+    public void OnBuildPlaced(Vector3 pos)
+    {
+        _lastPlacedPos = pos;
+        if (_state?.active == null || _zoneRing == null) return;
+
+        // 重写 65 点圆心为落位（半径不变）
+        for (int i = 0; i <= 64; i++)
+        {
+            float a = i / 64f * Mathf.PI * 2f;
+            _zoneRing.SetPosition(i, new Vector3(
+                pos.x + Mathf.Cos(a) * _state.active.zoneRadius, 0.25f,
+                pos.z + Mathf.Sin(a) * _state.active.zoneRadius));
+        }
+    }
+
+    /// <summary>查询当前委托验收区（圆心 XZ + 半径），供放置系统做绿圈外提示。</summary>
+    public bool TryGetActiveZone(out Vector2 zoneXZ, out float radius)
+    {
+        var active = _state?.active;
+        if (active != null)
+        {
+            zoneXZ = new Vector2(active.zoneX, active.zoneZ);
+            radius = active.zoneRadius;
+            return true;
+        }
+        zoneXZ = default;
+        radius = 0f;
+        return false;
     }
 
     private void DestroyZoneRing()

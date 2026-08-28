@@ -8,15 +8,19 @@ using UnityEngine;
 /// </summary>
 public class BuildingPanel : MonoBehaviour
 {
-    private static readonly string[] Templates =
+    // (模板id, 中文按钮名)：id 走 API，中文上按钮（民国世界观统一）
+    private static readonly (string id, string zh)[] Templates =
     {
-        "castle", "house", "tower", "pagoda", "pyramid", "temple", "bridge",
-        "fountain", "lighthouse", "wall", "garden", "windmill", "gazebo",
-        "skyscraper", "village", "statue", "sphere", "spiral", "mushroom",
-        "heart", "tree", "spaceship", "shanghai",
+        ("castle", "洋楼"), ("house", "房屋"), ("tower", "高塔"), ("pagoda", "宝塔"),
+        ("qilou", "骑楼"), ("paifang", "牌坊"), ("xitai", "戏台"), ("gulou", "鼓楼"),
+        ("temple", "庙宇"), ("bridge", "桥"), ("fountain", "喷泉"), ("wall", "围墙"),
+        ("garden", "花园"), ("windmill", "风车"), ("gazebo", "凉亭"), ("lighthouse", "灯塔"),
+        ("village", "村落"), ("statue", "雕像"), ("tree", "树"), ("pyramid", "金字塔"),
+        ("sphere", "球体"), ("spiral", "螺旋"), ("mushroom", "蘑菇"), ("heart", "心形"),
+        ("skyscraper", "高楼"), ("spaceship", "飞船"), ("shanghai", "上海"),
     };
 
-    private string _input = "建一个红色大城堡";
+    private string _input = "建一座青砖老洋楼";
     private int _templateIndex;
     private string _status = "";
     private bool _busy;
@@ -38,7 +42,7 @@ public class BuildingPanel : MonoBehaviour
 
     private void Update()
     {
-        if (CinematicIntro.IsCinematic || CinematicIntro.InputCooldown) return; // 演出期间/开始键那一帧不响应 Tab/回车
+        if (CinematicIntro.IsCinematic || CinematicIntro.InputCooldown || BuildingPlacement.Active) return; // 演出期间/开始键那一帧不响应 Tab/回车；放置期间输入归放置模式
 #if ENABLE_INPUT_SYSTEM
         var kb = UnityEngine.InputSystem.Keyboard.current;
         if (kb != null && kb.tabKey.wasPressedThisFrame) _visible = !_visible;
@@ -54,10 +58,13 @@ public class BuildingPanel : MonoBehaviour
 
     private void OnGUI()
     {
-        if (!_visible || CinematicIntro.IsCinematic) return;
+        if (!_visible || CinematicIntro.IsCinematic || BuildingPlacement.Active) return;
 
-        GUILayout.BeginArea(new Rect(16, 16, 360, 300), UiTheme.Panel);
-        GUILayout.Label("<b>AI 建筑生成</b>  <color=#888>(Tab 隐藏)</color>", UiTheme.Title);
+        UiTheme.BeginScale();
+        var areaRect = new Rect(16, 16, 380, 400);
+        GUILayout.BeginArea(areaRect, UiTheme.Panel);
+        UiTheme.Wash(areaRect);
+        GUILayout.Label("<b>AI 建筑生成</b>  <color=#5A5042>(Tab 隐藏)</color>", UiTheme.Title);
 
         _input = GUILayout.TextField(_input, UiTheme.Field);
 
@@ -68,8 +75,8 @@ public class BuildingPanel : MonoBehaviour
         }
 
         GUILayout.Space(4);
-        GUILayout.Label("模板快速生成：", UiTheme.Hint);
-        _scroll = GUILayout.BeginScrollView(_scroll, GUILayout.Height(90));
+        GUILayout.Label("图纸快速生成：", UiTheme.Hint);
+        _scroll = GUILayout.BeginScrollView(_scroll, GUILayout.Height(110));
         int columns = 4;
         int rows = Mathf.CeilToInt(Templates.Length / (float)columns);
         int selected = -1;
@@ -80,11 +87,12 @@ public class BuildingPanel : MonoBehaviour
             {
                 int idx = r * columns + c;
                 if (idx >= Templates.Length) break;
-                bool unlocked = CommissionSystem.IsTemplateUnlocked(Templates[idx]);
+                bool unlocked = CommissionSystem.IsTemplateUnlocked(Templates[idx].id);
                 GUI.enabled = !_busy && unlocked;
-                if (GUILayout.Button(unlocked ? Templates[idx] : "🔒" + Templates[idx], UiTheme.Btn, GUILayout.Width(80)))
+                if (GUILayout.Button(unlocked ? Templates[idx].zh : "🔒" + Templates[idx].zh, UiTheme.Btn, GUILayout.Width(80)))
                 {
                     selected = idx;
+                    AudioManager.Play("SFX_Click");
                 }
             }
             GUILayout.EndHorizontal();
@@ -93,16 +101,18 @@ public class BuildingPanel : MonoBehaviour
         GUI.enabled = !_busy;
         if (selected >= 0)
         {
-            StartCoroutine(GenerateCo(null, Templates[selected]));
+            StartCoroutine(GenerateCo(null, Templates[selected].id));
         }
 
         if (GUILayout.Button("清除全部建筑", UiTheme.Btn))
         {
+            AudioManager.Play("SFX_Click");
             if (BuildingManager.Instance != null)
             {
                 BuildingManager.Instance.Clear();
                 _status = "已清除";
             }
+            RoadBuilder.ClearAll(); // 自动引路随建筑一并清理
         }
         GUI.enabled = true;
 
@@ -111,6 +121,7 @@ public class BuildingPanel : MonoBehaviour
             GUILayout.Label(_status, UiTheme.Body);
         }
         GUILayout.EndArea();
+        UiTheme.EndScale();
     }
 
     private IEnumerator GenerateCo(string description, string template)
@@ -125,8 +136,14 @@ public class BuildingPanel : MonoBehaviour
             _status = "<color=red>场景中没有 BuildingManager</color>";
             yield break;
         }
+        if (BuildingPlacement.Active)
+        {
+            _status = "先放置当前建筑（左键放置 / 右键取消）";
+            yield break;
+        }
 
         _busy = true;
+        HeldItemUmbrella.Instance?.PlayGrab();
         _status = $"生成中…（{description ?? template}）";
         BuildingData result = null;
         string error = null;
@@ -150,14 +167,38 @@ public class BuildingPanel : MonoBehaviour
             GameObject building = BuildingManager.Instance.GenerateFromJson(result);
             if (building != null)
             {
-                PlaceInFrontOfPlayer(building.transform);
-                _status = $"<color=green>已生成「{result.name}」{result.blocks.Length} 块</color>";
-
-                // 委托系统登记：验收时上报（服务端多建筑取最优匹配）
-                if (CommissionSystem.Instance != null)
+                // 进入放置模式由玩家自选落点；放置系统不可用时回退玩家前方摆放
+                bool entered = BuildingPlacement.Begin(building, placed =>
                 {
-                    CommissionSystem.Instance.RegisterBuild(
-                        result.name, description, template, result.blocks.Length, building.transform);
+                    AudioManager.Play("SFX_Build");
+                    HeldItemUmbrella.Instance?.PlayBuild();
+                    _status = $"<color=green>已生成「{result.name}」{result.blocks.Length} 块</color>";
+
+                    // 委托系统登记：验收时上报（服务端多建筑取最优匹配）
+                    if (CommissionSystem.Instance != null)
+                    {
+                        CommissionSystem.Instance.RegisterBuild(
+                            result.name, description, template, result.blocks.Length, placed.transform);
+                        CommissionSystem.Instance.OnBuildPlaced(placed.transform.position);
+                    }
+
+                    // 自动接路：落点定了才铺，从最近路面长一条引路到门口
+                    RoadBuilder.ConnectBuilding(placed);
+                });
+                if (!entered)
+                {
+                    PlaceInFrontOfPlayer(building.transform);
+                    AudioManager.Play("SFX_Build");
+                    HeldItemUmbrella.Instance?.PlayBuild();
+                    _status = $"<color=green>已生成「{result.name}」{result.blocks.Length} 块</color>";
+
+                    if (CommissionSystem.Instance != null)
+                    {
+                        CommissionSystem.Instance.RegisterBuild(
+                            result.name, description, template, result.blocks.Length, building.transform);
+                        CommissionSystem.Instance.OnBuildPlaced(building.transform.position);
+                    }
+                    RoadBuilder.ConnectBuilding(building);
                 }
             }
             else

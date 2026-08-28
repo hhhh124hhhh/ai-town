@@ -50,9 +50,9 @@ public class CinematicIntro : MonoBehaviour
     private const float TitleAt = 3.8f;
     private const float DiveAt = 7.2f;
     private const float DiveSeconds = 2.0f;
-    private const string FallbackLine = "听说，来了一位——说句话就能盖房子的建造师。";
+    private const string FallbackLine = "听说，来了一位——说句话就能让砖瓦自己长成楼的营造师。";
     private const string Title = "AI 小镇";
-    private const string Subtitle = "说出愿望，落地成真";
+    private const string Subtitle = "一言既出，砖瓦成楼";
 
     // ── 演出状态（OnGUI 读取）──
     private enum Phase { Black, Type, Scene, Dive, AwaitStart, Toast, Done }
@@ -94,6 +94,7 @@ public class CinematicIntro : MonoBehaviour
 
     private void Start()
     {
+        _ = AudioManager.I; // 懒创建并开始 BGM 循环
         _player = GameObject.Find("Player")?.transform;
         CollectBlocks();
         SetupCameraAndControls();
@@ -273,12 +274,13 @@ public class CinematicIntro : MonoBehaviour
                 if (b != null) b.enabled = true;
             }
         }
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+        // 右键视角模式：指针默认自由（MouseLookGate 在按住右键时才锁定）
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
 
         _inputCooldownUntil = Time.unscaledTime + 0.3f;
         _phase = Phase.Toast;
-        _toast = "【Tab】说出你的第一个愿望　　【C】委托面板　　【F】飞行";
+        _toast = "【Tab】说出你的第一个愿望　【C】委托　【F】飞行　【按住右键拖动】环顾小镇";
         _toastShown = true;
         StartCoroutine(ToastCo());
     }
