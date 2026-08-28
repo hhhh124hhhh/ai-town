@@ -75,7 +75,7 @@ namespace AiTown.EditorTools
                 ("Road_GateApron",   0f,     1.1f,  8f,   2.2f, EnsureStoneMat($"{RoadMatDir}/Stone_GateApron.mat", tex)),
                 ("Road_West_A",      -11f,   1.8f,  2f,   8f,   EnsureStoneMat($"{RoadMatDir}/Stone_West_A.mat", tex)),
                 ("Road_West_B",      -8.4f,  -1.1f, 3.2f, 2.2f, EnsureStoneMat($"{RoadMatDir}/Stone_West_B.mat", tex)),
-                ("Road_West_C",      -12.85f, 4.6f, 5.3f, 2f,   EnsureStoneMat($"{RoadMatDir}/Stone_West_C.mat", tex)),
+                ("Road_Hut_Pad",     -3.75f,  0.7f, 2.5f, 1.5f, EnsureStoneMat($"{RoadMatDir}/Stone_Hut_Pad.mat", tex)),
                 ("Road_Qilou_EW",    14f,    -13f,  24f,  3f,   EnsureStoneMat($"{RoadMatDir}/Stone_Qilou_EW.mat", tex)),
                 ("Road_Qilou_NS",    8.5f,   -6f,   3f,   11f,  EnsureStoneMat($"{RoadMatDir}/Stone_Qilou_NS.mat", tex)),
                 ("Road_East_Square", 22.5f,  -8.5f, 6f,   6f,   EnsureStoneMat($"{RoadMatDir}/Stone_East_Square.mat", tex)),

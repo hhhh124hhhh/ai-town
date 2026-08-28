@@ -25,7 +25,7 @@ namespace AiTown.EditorTools
         private class InstanceDef { public float x; public float z; public float rot; }
 
         [Serializable]
-        private class PropDef { public string name; public string prefab; public float height; public float scale; public float y; public string material; public InstanceDef[] instances; }
+        private class PropDef { public string name; public string prefab; public float height; public float scale; public float y; public float rotX; public string material; public InstanceDef[] instances; }
 
         [Serializable]
         private class Manifest { public PropDef[] props; }
@@ -62,7 +62,8 @@ namespace AiTown.EditorTools
                     var inst = prop.instances[i];
                     var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, root.transform);
                     go.name = $"{prop.name}_{i + 1}";
-                    go.transform.rotation = Quaternion.Euler(0f, inst.rot, 0f);
+                    // rotX 供 Z-up FBX（如 Rodin 树）竖立使用，默认 0 保持原行为
+                    go.transform.rotation = Quaternion.Euler(prop.rotX, inst.rot, 0f);
                     if (prop.scale > 0)
                     {
                         // 硬编码缩放模式：厘米单位 FBX 的 renderer.bounds 含未修正的辅助包围盒，

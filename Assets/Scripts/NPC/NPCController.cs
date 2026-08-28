@@ -17,7 +17,21 @@ public class NPCController : MonoBehaviour
     [Header("交互")]
     public float interactRange = 3f;
 
+    [Header("朝向")]
+    [Tooltip("转身 smoothTime（秒），越大转得越从容")]
+    public float turnSmoothTime = 0.35f;
+    [Tooltip("转身最大角速度（度/秒），防止大幅转身起手过猛")]
+    public float maxTurnSpeed = 270f;
+    [Tooltip("目标偏角超过该值才重新转身（度），避免贴身炮塔式连续追踪")]
+    public float reAimDegrees = 25f;
+    [Tooltip("模型正面不是 +Z 时用它修正（度）")]
+    public float modelYawOffset = 0f;
+
     private Transform _player;
+    private float _yaw;
+    private float _targetYaw;
+    private float _yawVelocity;
+    private bool _yawInit;
     private Transform _head;
     private Renderer _modelRenderer;
     private bool _playerNearby;
@@ -94,6 +108,34 @@ public class NPCController : MonoBehaviour
 
         float dist = Vector3.Distance(transform.position, _player.position);
         _playerNearby = dist <= interactRange;
+
+        // 朝向：靠近/对话时才"重新锁定"目标朝向，转身用 SmoothDampAngle 自然加减速；
+        // 离开范围不打断，把当前这一转身收完再停，避免中途急停
+        if (!_yawInit)
+        {
+            _yaw = transform.eulerAngles.y;
+            _targetYaw = _yaw;
+            _yawInit = true;
+        }
+
+        if ((_playerNearby || InConversation) && !CinematicIntro.IsCinematic)
+        {
+            Vector3 toPlayer = _player.position - transform.position;
+            toPlayer.y = 0f;
+            if (toPlayer.sqrMagnitude > 0.0001f)
+            {
+                float desired = Mathf.Atan2(toPlayer.x, toPlayer.z) * Mathf.Rad2Deg + modelYawOffset;
+                if (Mathf.Abs(Mathf.DeltaAngle(_yaw, desired)) > reAimDegrees)
+                    _targetYaw = desired; // 偏角足够大才重瞄，玩家小幅挪动不触发转身
+            }
+        }
+
+        float newYaw = Mathf.SmoothDampAngle(_yaw, _targetYaw, ref _yawVelocity, turnSmoothTime, maxTurnSpeed);
+        if (!Mathf.Approximately(newYaw, _yaw))
+        {
+            transform.rotation = Quaternion.Euler(0f, newYaw, 0f);
+            _yaw = newYaw;
+        }
 
         if (_playerNearby && !_playerNearbyPrev && DialogSystem.Instance == null
             && !CinematicIntro.IsCinematic) // 开场演出期间不冒问候气泡
