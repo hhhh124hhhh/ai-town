@@ -248,7 +248,7 @@ public class CommissionSystem : MonoBehaviour
         float h = Pad * 2f + s1.y + (line2 != null ? s2.y + 4f : 0f) + 10f;
         _hudBottom = 16f + h;
 
-        var rect = new Rect(UiTheme.VW - w - 16f, 16f, w, h);
+        var rect = new Rect(UiTheme.VW - w - UiTheme.RightMargin, 16f, w, h); // 右缘让位 Cowork 侧条(仅编辑器)
         GUILayout.BeginArea(rect, UiTheme.Hud);
         UiTheme.Wash(rect, 0.95f); // hud_bg 贴图自带抽屉纹/铜钱装饰,0.8 压不住会透出来和文字相叠,近实底才素净
         GUILayout.Label(line1, st);
@@ -260,7 +260,7 @@ public class CommissionSystem : MonoBehaviour
     {
         float w = 420f;
         float h = Mathf.Min(470f, UiTheme.VH - 130f);
-        var rect = new Rect(UiTheme.VW - w - 12f, _hudBottom + 12f, w, h); // 动态挂 HUD 下方
+        var rect = new Rect(UiTheme.VW - w - UiTheme.RightMargin, _hudBottom + 12f, w, h); // 动态挂 HUD 下方
 
         GUILayout.BeginArea(rect, UiTheme.Panel);
         UiTheme.Wash(rect);

@@ -32,6 +32,10 @@ public static class UiTheme
     /// <summary>缩放后坐标系里的虚拟屏高。</summary>
     public static float VH => Screen.height / Scale;
 
+    /// <summary>右上角右缘留白：编辑器里避开 Tuanjie Cowork 悬浮侧条（约 30 屏幕像素宽，外挂
+    /// 覆盖层游戏无法隐藏只能让位）；打包构建后无此覆盖层，正常贴边。</summary>
+    public static float RightMargin => Application.isEditor ? 48f : 16f;
+
     private static Matrix4x4 _prevMatrix;
     /// <summary>OnGUI 开头调用：之后所有绘制按 Scale 放大，结尾配对 EndScale。</summary>
     public static void BeginScale()
@@ -175,9 +179,19 @@ public static class UiTheme
             padding = new RectOffset(10, 10, 6, 6),
             fontSize = fontSize,
         };
-        if (normal != null) s.normal.background = normal;
-        if (hover != null) s.hover.background = hover;
-        if (active != null) s.active.background = active;
+        // hover/active 未提供贴图时固定沿用 normal 背景：
+        // 留空会继承默认皮肤的灰白高亮，鼠标悬停时整块跳变（民国底色全丢）
+        if (normal != null)
+        {
+            s.normal.background = normal;
+            if (hover == null) s.hover.background = normal;
+            if (active == null) s.active.background = normal;
+        }
+        else
+        {
+            if (hover != null) s.hover.background = hover;
+            if (active != null) s.active.background = active;
+        }
         s.normal.textColor = textColor;
         s.hover.textColor = textColor;
         s.active.textColor = textColor;

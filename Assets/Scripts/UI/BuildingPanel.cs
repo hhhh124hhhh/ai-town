@@ -24,6 +24,7 @@ public class BuildingPanel : MonoBehaviour
     private int _templateIndex;
     private string _status = "";
     private bool _busy;
+    private float _busySince;        // _busy 置真时刻（看门狗用）
     private bool _visible = true;
     private Vector2 _scroll;
 
@@ -42,10 +43,21 @@ public class BuildingPanel : MonoBehaviour
 
     private void Update()
     {
+        // _busy 看门狗：Play 中途脚本重载会掐死协程，_busy 卡 true 后回车永久静默失效
+        if (_busy && Time.unscaledTime - _busySince > 75f)
+        {
+            _busy = false;
+            _status = "<color=red>生成超时已重置，再按一次回车</color>";
+        }
         if (CinematicIntro.IsCinematic || CinematicIntro.InputCooldown || BuildingPlacement.Active) return; // 演出期间/开始键那一帧不响应 Tab/回车；放置期间输入归放置模式
 #if ENABLE_INPUT_SYSTEM
         var kb = UnityEngine.InputSystem.Keyboard.current;
-        if (kb != null && kb.tabKey.wasPressedThisFrame) _visible = !_visible;
+        // Tab 永远可切换面板（不受打字门控——输入框焦点残留时 Tab 是唯一逃生口;隐藏时一并释放焦点）
+        if (kb != null && kb.tabKey.wasPressedThisFrame)
+        {
+            _visible = !_visible;
+            if (!_visible) UiTextFocus.Clear();
+        }
         // 回车=生成（便携手感 + 远程测试钩子：桥 manage_input 可触发）
         // 对话框打开时让位给 DialogSystem，避免一次回车同时触发两处
         if (kb != null && kb.enterKey.wasPressedThisFrame && !_busy && _visible
@@ -56,9 +68,17 @@ public class BuildingPanel : MonoBehaviour
 #endif
     }
 
+    private Rect _inputFieldRect; // 输入框在面板内区域（点击框外释放键盘焦点用）
+    private bool _inputFocused;   // 上一帧键盘焦点是否在本输入框
+
     private void OnGUI()
     {
-        if (!_visible || CinematicIntro.IsCinematic || BuildingPlacement.Active) return;
+        if (!_visible || CinematicIntro.IsCinematic || BuildingPlacement.Active)
+        {
+            // 面板不可见时不得持有键盘焦点,否则 WASD 一直打进隐藏输入框
+            if (GUIUtility.keyboardControl != 0) UiTextFocus.Clear();
+            return;
+        }
 
         UiTheme.BeginScale();
         var areaRect = new Rect(16, 16, 440, 420); // 440 宽 = 4×80 按钮 + padding 72 + 间距
@@ -67,6 +87,13 @@ public class BuildingPanel : MonoBehaviour
         GUILayout.Label("<b>AI 建筑生成</b>  <color=#5A5042>(Tab 隐藏)</color>", UiTheme.Title);
 
         _input = GUILayout.TextField(_input, UiTheme.Field);
+        _inputFieldRect = GUILayoutUtility.GetLastRect();
+        _inputFocused = GUIUtility.keyboardControl != 0;
+
+        // 点击输入框以外（场景/其他按钮）即释放键盘焦点——移动键回到角色,防误输入
+        var ev = Event.current;
+        if (ev != null && ev.type == EventType.MouseDown && _inputFocused && !_inputFieldRect.Contains(ev.mousePosition))
+            UiTextFocus.Clear();
 
         GUI.enabled = !_busy;
         if (GUILayout.Button("生成（自然语言）", UiTheme.BtnPrimary))
@@ -126,6 +153,7 @@ public class BuildingPanel : MonoBehaviour
 
     private IEnumerator GenerateCo(string description, string template)
     {
+        ApiClient.EnsureExists(); // Play 中途脚本重载会洗掉单例，先懒补建
         if (ApiClient.Instance == null)
         {
             _status = "<color=red>场景中没有 ApiClient</color>";
@@ -143,6 +171,7 @@ public class BuildingPanel : MonoBehaviour
         }
 
         _busy = true;
+        _busySince = Time.unscaledTime;
         HeldItemUmbrella.Instance?.PlayGrab();
         _status = $"生成中…（{description ?? template}）";
         BuildingData result = null;
@@ -199,6 +228,11 @@ public class BuildingPanel : MonoBehaviour
                         CommissionSystem.Instance.OnBuildPlaced(building.transform.position);
                     }
                     RoadBuilder.ConnectBuilding(building);
+                }
+                else
+                {
+                    // 幽灵已跟随准星：明确告知进入放置，别让"生成中…"挂着误导没生成
+                    _status = $"<color=green>已生成「{result.name}」——准星选落点，左键放置 / 右键取消</color>";
                 }
             }
             else
