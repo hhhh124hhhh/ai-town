@@ -173,7 +173,7 @@ public class CommissionSystem : MonoBehaviour
         {
             var kb = UnityEngine.InputSystem.Keyboard.current;
             if (kb != null && kb.cKey.wasPressedThisFrame && DialogSystem.Instance == null
-                && !BuildingPlacement.Active)
+                && !BuildingPlacement.Active && !UiTextFocus.IsTyping)
             {
                 if (_panelVisible) RefreshNpcCache(); // 面板里可能新增了 NPC
                 _panelVisible = !_panelVisible;
@@ -228,17 +228,27 @@ public class CommissionSystem : MonoBehaviour
         UiTheme.EndScale();
     }
 
+    private float _hudBottom = 100f; // HUD 实际底边（自适应后），委托面板挂其下方
+
     private void DrawHud()
     {
-        float w = 320f;
-        var rect = new Rect(UiTheme.VW - w - 12f, 12f, w, _state.active != null ? 84f : 56f);
+        var st = UiTheme.Text(13);
+        string line1 = $"<b>★{_state.level} {_state.levelName}</b>　繁荣 {_state.prosperity}　大洋 {_state.gold}　完成 {_state.completed} 单";
+        string line2 = _state.active != null ? $"<color=#9E2B25><b>委托：{_state.active.npc} · {_state.active.title}</b></color>（[C] 面板）" : null;
+
+        // 按内容自适应盒子大小：文字永不溢出、不贴屏缘（测量用不换行副本）
+        var measure = new GUIStyle(st) { wordWrap = false };
+        var s1 = measure.CalcSize(new GUIContent(line1));
+        var s2 = line2 != null ? measure.CalcSize(new GUIContent(line2)) : Vector2.zero;
+        float w = Mathf.Max(200f, Mathf.Max(s1.x, s2.x)) + 40f; // +左右 padding
+        float h = (line2 != null ? s1.y + s2.y + 4f : s1.y) + 24f;
+        _hudBottom = 16f + h;
+
+        var rect = new Rect(UiTheme.VW - w - 16f, 16f, w, h);
         GUILayout.BeginArea(rect, UiTheme.Hud);
-        UiTheme.Wash(rect, 0.88f);
-        GUILayout.Label($"<b>★{_state.level} {_state.levelName}</b>　繁荣 {_state.prosperity}　大洋 {_state.gold}　完成 {_state.completed} 单", UiTheme.Text(13));
-        if (_state.active != null)
-        {
-            GUILayout.Label($"<color=#9E2B25><b>委托：{_state.active.npc} · {_state.active.title}</b></color>（[C] 面板）", UiTheme.Text(13));
-        }
+        UiTheme.Wash(rect, 0.8f);
+        GUILayout.Label(line1, st);
+        if (line2 != null) GUILayout.Label(line2, st);
         GUILayout.EndArea();
     }
 
@@ -246,7 +256,7 @@ public class CommissionSystem : MonoBehaviour
     {
         float w = 420f;
         float h = Mathf.Min(470f, UiTheme.VH - 130f);
-        var rect = new Rect(UiTheme.VW - w - 12f, 104f, w, h);
+        var rect = new Rect(UiTheme.VW - w - 12f, _hudBottom + 12f, w, h); // 动态挂 HUD 下方
 
         GUILayout.BeginArea(rect, UiTheme.Panel);
         UiTheme.Wash(rect);
