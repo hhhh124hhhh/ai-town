@@ -55,34 +55,28 @@ public class GlobalVolumeFeature : ScriptableRendererFeature
         {
             GlobalVolumePass.vol.sharedProfile = null;
         }
-        
-        
+
         m_ScriptablePass = new GlobalVolumePass
         {
-            // Configures where the render pass should be injected.
             renderPassEvent = RenderPassEvent.BeforeRendering,
             _baseProfile = this._baseProfile,
         };
-        m_ScriptablePass.CreateVolumeIfNotExists();
     }
 
-    // Here you can inject one or multiple render passes in the renderer.
-    // This method is called when setting up the renderer once per-camera.
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
     {
-        
-        if(GlobalVolumePass.volumeHolder == null)
+        if (GlobalVolumePass.volumeHolder == null)
         {
             var old = GameObject.Find("[DefaultVolume]");
-            if (Application.isPlaying)
+            if (old != null)
             {
-                Destroy(old);
-            }
-            else
-            {
-                DestroyImmediate(old);
+                if (Application.isPlaying)
+                    Destroy(old);
+                else
+                    DestroyImmediate(old);
             }
         }
+        m_ScriptablePass.CreateVolumeIfNotExists();
         renderer.EnqueuePass(m_ScriptablePass);
     }
     
