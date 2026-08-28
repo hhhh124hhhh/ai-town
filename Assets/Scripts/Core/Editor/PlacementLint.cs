@@ -173,19 +173,28 @@ namespace AiTown.EditorTools
         private static List<Rect2> CollectRoadRects()
         {
             var list = new List<Rect2>();
+            // 路网不只看 _Roads：河流系统的桥头引路（_River/Path_To_Road/Path）也是路，
+            // 名字不带 Road_ 前缀导致首版漏检（树站引路上的根因）
+            var roots = new List<Transform>();
             var roads = GameObject.Find("_Roads");
-            if (roads == null) return list;
-            foreach (Transform seg in roads.transform)
+            if (roads != null) roots.Add(roads.transform);
+            var pathToRoad = GameObject.Find("_River/Path_To_Road");
+            if (pathToRoad != null) roots.Add(pathToRoad.transform);
+
+            foreach (var rootT in roots)
             {
-                // Plane 原生 10×10，world 尺寸 = localScale×10
-                float hx = Mathf.Abs(seg.localScale.x) * 5f + RoadMargin;
-                float hz = Mathf.Abs(seg.localScale.z) * 5f + RoadMargin;
-                list.Add(new Rect2
+                foreach (Transform seg in rootT)
                 {
-                    Name = seg.name,
-                    Min = new Vector2(seg.position.x - hx, seg.position.z - hz),
-                    Max = new Vector2(seg.position.x + hx, seg.position.z + hz),
-                });
+                    // Plane 原生 10×10，world 尺寸 = localScale×10
+                    float hx = Mathf.Abs(seg.localScale.x) * 5f + RoadMargin;
+                    float hz = Mathf.Abs(seg.localScale.z) * 5f + RoadMargin;
+                    list.Add(new Rect2
+                    {
+                        Name = seg.name,
+                        Min = new Vector2(seg.position.x - hx, seg.position.z - hz),
+                        Max = new Vector2(seg.position.x + hx, seg.position.z + hz),
+                    });
+                }
             }
             return list;
         }
