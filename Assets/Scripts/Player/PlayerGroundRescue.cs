@@ -37,7 +37,7 @@ public class PlayerGroundRescue : MonoBehaviour
         }
 
         if (CinematicIntro.IsCinematic || CinematicIntro.InputCooldown) return;
-        if (DialogSystem.Instance != null) return; // 对话打字期间不抢 X
+        if (DialogSystem.Instance != null || UiTextFocus.IsTyping) return; // 对话/打字期间不抢 X
 
 #if ENABLE_INPUT_SYSTEM
         var kb = Keyboard.current;

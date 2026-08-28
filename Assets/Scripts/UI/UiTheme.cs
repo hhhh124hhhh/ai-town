@@ -69,6 +69,20 @@ public static class UiTheme
     private static readonly Dictionary<int, GUIStyle> _textCache = new Dictionary<int, GUIStyle>();
 
     /// <summary>
+    /// 把字色钉进全部交互态（normal/hover/active/focused）。IMGUI 控件——包括 Label——
+    /// 鼠标悬停/按下时会切换 hover/active 态，只设 normal 会继承默认皮肤的白字
+    /// （默认皮肤按深色编辑器底设计），悬停那行瞬间变白压宣纸隐形。
+    /// </summary>
+    private static GUIStyle InkAllStates(GUIStyle s, Color color)
+    {
+        s.normal.textColor = color;
+        s.hover.textColor = color;
+        s.active.textColor = color;
+        s.focused.textColor = color;
+        return s;
+    }
+
+    /// <summary>
     /// 指定字号的墨色正文（按字号缓存）。IMGUI 的 GUI.skin.label 默认白字，
     /// 压宣纸底会隐形——面板内容文字一律用本方法，禁止裸 new GUIStyle(GUI.skin.label)。
     /// </summary>
@@ -82,8 +96,7 @@ public static class UiTheme
             fontSize = size,
             wordWrap = true,
         };
-        style.normal.textColor = Ink;
-        _textCache[size] = style;
+        _textCache[size] = InkAllStates(style, Ink);
         return style;
     }
 
@@ -128,18 +141,15 @@ public static class UiTheme
         _btnPrimary = MakeButton(_btnRed != null ? _btnRed : _solidRed, null, null, border12,
             Paper, 16);
 
-        _title = new GUIStyle(GUI.skin.label)
+        _title = InkAllStates(new GUIStyle(GUI.skin.label)
         {
             fontStyle = FontStyle.Bold,
             fontSize = 20,
-        };
-        _title.normal.textColor = Ink;
+        }, Ink);
 
-        _body = new GUIStyle(GUI.skin.label) { richText = true, fontSize = 16 };
-        _body.normal.textColor = Ink;
+        _body = InkAllStates(new GUIStyle(GUI.skin.label) { richText = true, fontSize = 16 }, Ink);
 
-        _hint = new GUIStyle(GUI.skin.label) { richText = true, fontSize = 14 };
-        _hint.normal.textColor = InkSoft;
+        _hint = InkAllStates(new GUIStyle(GUI.skin.label) { richText = true, fontSize = 14 }, InkSoft);
 
         _field = new GUIStyle(GUI.skin.textField);
         // 输入框底用内置 whiteTexture（运行时自建贴图在团结下会失效跌回深色默认皮肤）
@@ -165,7 +175,7 @@ public static class UiTheme
             padding = new RectOffset(padding, padding, padding, padding),
         };
         if (bg != null) s.normal.background = bg;
-        s.normal.textColor = textColor;
+        InkAllStates(s, textColor);
         s.fontSize = fontSize;
         return s;
     }

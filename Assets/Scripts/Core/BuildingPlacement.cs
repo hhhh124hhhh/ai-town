@@ -16,12 +16,21 @@ using StarterAssets;
 public class BuildingPlacement : MonoBehaviour
 {
     private const float RayMaxDistance = 80f;
+    private const float GroundY = 0.04f;           // 落点基准地面高度（垫在路网 0.015~0.035 之上防闪面）
     private const float OverlapTolerance = 0.3f;   // 重叠判定的宽容量（米）
     private const float ConfirmIgnoreTime = 0.15f; // 进入后短暂忽略确认，防面板鼠标残余点击
+    private const float MinScale = 0.5f;           // 缩放下限（Ctrl+滚轮调节）
+    private const float MaxScale = 2.0f;
+    private const float ScaleStep = 0.05f;
+    // 障碍物脚印内收比例（每侧占其尺寸）：树冠/挑檐等悬空轮廓不该整块禁建。
+    // 道具（树是大头）收 30%，建筑只收 6%（留飞檐余量，墙体仍不允许交叉）
+    private const float ShrinkProps = 0.30f;
+    private const float ShrinkBuildings = 0.06f;
 
-    /// <summary>小镇可放置范围（XZ 矩形）：按路网实测范围外扩一点，
-    /// 北门(z≈+2.5)到南土路(z≈-20)、西街(x≈-15.5)到骑楼东街(x≈+26)。</summary>
-    private static readonly Rect TownBounds = new Rect(-18f, -22f, 44f, 27f);
+    /// <summary>小镇可放置范围（XZ 矩形）：与 PlayerBounds 的内堤可走范围一致
+    /// （护城河内堤 x-18/22、z-22/26 各内收 0.5m），北门以北的镇内空地一并开放；
+    /// 东带 x>21.5 是护城河水面，不放。扩镇时与 PlayerBounds 同步改。</summary>
+    private static readonly Rect TownBounds = new Rect(-17.5f, -21.5f, 39f, 47f);
 
     private static readonly Color ValidColor = new Color(0.3f, 1f, 0.5f, 0.45f);
     private static readonly Color InvalidColor = new Color(1f, 0.25f, 0.2f, 0.45f);
@@ -43,9 +52,23 @@ public class BuildingPlacement : MonoBehaviour
 
         if (_instance == null)
         {
+            // Play 中途脚本重载会洗掉 static：找回场景里残留的放置实例，
+            // 清掉孤儿幽灵/隐藏建筑后复用，否则会双实例抢指针
+            var existing = FindFirstObjectByType<BuildingPlacement>();
+            if (existing != null)
+            {
+                if (existing._ghostRoot != null) Destroy(existing._ghostRoot);
+                if (existing._real != null) Destroy(existing._real);
+                _instance = existing;
+            }
+        }
+        if (_instance == null)
+        {
             var go = new GameObject("_BuildingPlacement");
             _instance = go.AddComponent<BuildingPlacement>();
         }
+        // 回车生成时输入框仍聚焦：先交还键盘焦点，放置期间的 R/Esc/X 等按键不被打字门控卡住
+        UiTextFocus.Clear();
         _instance.StartPlacement(building, cam, onConfirmed);
         return true;
     }
@@ -63,6 +86,7 @@ public class BuildingPlacement : MonoBehaviour
     private Bounds _localBounds;     // 建筑在自身根节点本地空间内的包围盒
     private Vector3 _offsetLocal;    // 本地包围盒中心相对根节点的偏移
     private float _yaw;
+    private float _scale = 1f;       // 当前缩放（每次进入放置重置为 1）
     private float _enterTime;
     private bool _valid;
     private string _invalidReason = "";
@@ -118,6 +142,24 @@ public class BuildingPlacement : MonoBehaviour
             : 0f;
 
         _footRing = CreateFootRing();
+        _yaw = 0f;
+        _scale = 1f;
+
+        // 幽灵出生即拉到玩家前方 8m 地面：进放置模式立刻可见（下一帧起准星接管），
+        // 否则建筑默认点位可能在身后/远处，用户误以为"没有生成"
+        if (_player != null)
+        {
+            Vector3 fwd = _player.forward;
+            fwd.y = 0f;
+            if (fwd.sqrMagnitude < 0.001f) fwd = Vector3.forward;
+            fwd.Normalize();
+            Vector3 spawn = _player.position + fwd * 8f;
+            spawn.x = Mathf.Clamp(spawn.x, TownBounds.xMin, TownBounds.xMax);
+            spawn.z = Mathf.Clamp(spawn.z, TownBounds.yMin, TownBounds.yMax);
+            spawn.y = 0.05f;
+            _ghost.transform.position = spawn;
+        }
+
         _enterTime = Time.unscaledTime;
 
         // 接管指针：MouseLookGate 期间挂起，视角随鼠标直通旋转
@@ -154,15 +196,26 @@ public class BuildingPlacement : MonoBehaviour
         var mouse = Mouse.current;
         if (mouse != null)
         {
-            // 滚轮微调：单帧增量夹到 ±1（一步 15°），兼容不同平台的滚轮刻度
+            // 滚轮：单帧增量夹到 ±1（一步 15°），兼容不同平台的滚轮刻度；
+            // 按住 Ctrl 时改为缩放（一步 5%，0.5~2.0 倍）
             float scroll = mouse.scroll.ReadValue().y;
             if (!Mathf.Approximately(scroll, 0f))
             {
-                _scrollAccum += Mathf.Clamp(scroll, -1f, 1f);
-                if (Mathf.Abs(_scrollAccum) >= 1f)
+                float step = Mathf.Clamp(scroll, -1f, 1f);
+                bool scaling = kb != null
+                    && (kb.leftCtrlKey.isPressed || kb.rightCtrlKey.isPressed);
+                if (scaling)
                 {
-                    _yaw += Mathf.Sign(_scrollAccum) * 15f;
-                    _scrollAccum = 0f;
+                    _scale = Mathf.Clamp(_scale + step * ScaleStep, MinScale, MaxScale);
+                }
+                else
+                {
+                    _scrollAccum += step;
+                    if (Mathf.Abs(_scrollAccum) >= 1f)
+                    {
+                        _yaw += Mathf.Sign(_scrollAccum) * 15f;
+                        _scrollAccum = 0f;
+                    }
                 }
             }
         }
@@ -180,19 +233,18 @@ public class BuildingPlacement : MonoBehaviour
 
         var ray = cam.ScreenPointToRay(new Vector3(Screen.width / 2f, Screen.height / 2f, 0f));
         Vector3? aim = null;
-        if (Physics.Raycast(ray, out var hit, RayMaxDistance))
+        if (ray.direction.y < -0.001f)
         {
-            // 落点取命中处，y 夹取在地面附近（防射线打到已有建筑的墙面/楼顶把楼放上天）
-            aim = new Vector3(hit.point.x, Mathf.Clamp(hit.point.y, -0.2f, 0.8f), hit.point.z);
-        }
-        else if (ray.direction.y < -0.05f)
-        {
-            // 射线打空（指到天空盒假地面）时向 y=0 地面投影兜底，幽灵继续跟准星
+            // 小镇是平地：落点一律取射线与地面 y=0 的交点（贴地）。
+            // 旧版用 raycast 命中点 + y 夹取，瞄到树冠/墙面时幽灵会浮到 0.8m
             float t = -ray.origin.y / ray.direction.y;
-            var p = ray.origin + ray.direction * t;
-            aim = new Vector3(p.x, 0f, p.z);
+            if (t <= RayMaxDistance)
+            {
+                var p = ray.origin + ray.direction * t;
+                aim = new Vector3(p.x, GroundY, p.z);
+            }
         }
-        else
+        if (!aim.HasValue)
         {
             _invalidReason = "指向地面以选择落点";
             ApplyPose(null);
@@ -217,7 +269,7 @@ public class BuildingPlacement : MonoBehaviour
         {
             // 距离按建筑包围盒中心量（与服务端 pos + extents 语义一致取中心附近）
             Vector3 center = _ghost.transform.position
-                + Quaternion.Euler(0f, _yaw, 0f) * _offsetLocal;
+                + Quaternion.Euler(0f, _yaw, 0f) * (_offsetLocal * _scale);
             float dx = center.x - zone.x;
             float dz = center.z - zone.y;
             if (Mathf.Sqrt(dx * dx + dz * dz) > radius)
@@ -228,15 +280,16 @@ public class BuildingPlacement : MonoBehaviour
         _warn = string.Join("；", warns);
     }
 
-    /// <summary>按落点与当前朝向摆幽灵；aim 为 null 时幽灵保持原地并标为无效。</summary>
+    /// <summary>按落点、朝向与当前缩放摆幽灵；aim 为 null 时幽灵保持原地并标为无效。</summary>
     private void ApplyPose(Vector3? aim)
     {
         _valid = false;
+        _ghost.transform.localScale = Vector3.one * _scale;
         if (aim.HasValue)
         {
             var rot = Quaternion.Euler(0f, _yaw, 0f);
-            Vector3 pos = aim.Value - rot * _offsetLocal;
-            pos.y = aim.Value.y - _localBounds.min.y;
+            Vector3 pos = aim.Value - rot * (_offsetLocal * _scale);
+            pos.y = aim.Value.y - _localBounds.min.y * _scale;
             _ghost.transform.SetPositionAndRotation(pos, rot);
             _valid = true;
         }
@@ -264,16 +317,16 @@ public class BuildingPlacement : MonoBehaviour
         }
 
         var buildings = GameObject.Find("_Buildings");
-        if (buildings != null && OverlapsAny(buildings.transform, xz, out reason)) return false;
+        if (buildings != null && OverlapsAny(buildings.transform, xz, ShrinkBuildings, out reason)) return false;
 
         var props = GameObject.Find("_Props");
-        if (props != null && OverlapsAny(props.transform, xz, out reason)) return false;
+        if (props != null && OverlapsAny(props.transform, xz, ShrinkProps, out reason)) return false;
 
         reason = "";
         return true;
     }
 
-    private static bool OverlapsAny(Transform root, Rect xz, out string reason)
+    private static bool OverlapsAny(Transform root, Rect xz, float shrink, out string reason)
     {
         foreach (Transform child in root)
         {
@@ -283,8 +336,16 @@ public class BuildingPlacement : MonoBehaviour
 
             var bounds = renderers[0].bounds;
             foreach (var r in renderers) bounds.Encapsulate(r.bounds);
-            if (bounds.max.x > xz.xMin && bounds.min.x < xz.xMax
-                && bounds.max.z > xz.yMin && bounds.min.z < xz.yMax)
+
+            // XZ 脚印内收：树冠、飞檐等悬空部分不按整包封锁落点
+            float insetX = bounds.size.x * shrink;
+            float insetZ = bounds.size.z * shrink;
+            var foot = Rect.MinMaxRect(
+                bounds.min.x + insetX, bounds.min.z + insetZ,
+                bounds.max.x - insetX, bounds.max.z - insetZ);
+
+            if (foot.xMax > xz.xMin && foot.xMin < xz.xMax
+                && foot.yMax > xz.yMin && foot.yMin < xz.yMax)
             {
                 reason = $"与「{child.name}」重叠";
                 return true;
@@ -313,6 +374,7 @@ public class BuildingPlacement : MonoBehaviour
     {
         _real.transform.SetPositionAndRotation(
             _ghost.transform.position, _ghost.transform.rotation);
+        _real.transform.localScale = Vector3.one * _scale; // 缩放一并落到真实建筑
         _real.SetActive(true);
         Cleanup();
         _onConfirmed?.Invoke(_real);
@@ -388,6 +450,7 @@ public class BuildingPlacement : MonoBehaviour
                 (i & 1) == 0 ? _localBounds.min.x : _localBounds.max.x,
                 (i & 2) == 0 ? _localBounds.min.y : _localBounds.max.y,
                 (i & 4) == 0 ? _localBounds.min.z : _localBounds.max.z);
+            corner *= _scale; // 缩放后脚印/重叠判定按实际包围盒
             var p = _ghost.transform.position + rot * corner;
             if (seeded) world.Encapsulate(p);
             else
@@ -425,7 +488,7 @@ public class BuildingPlacement : MonoBehaviour
         _footRing.endColor = color;
 
         var b = WorldBounds();
-        float y = _ghost.transform.position.y + _localBounds.min.y + 0.06f;
+        float y = _ghost.transform.position.y + _localBounds.min.y * _scale + 0.06f;
         _footRing.SetPosition(0, new Vector3(b.min.x, y, b.min.z));
         _footRing.SetPosition(1, new Vector3(b.max.x, y, b.min.z));
         _footRing.SetPosition(2, new Vector3(b.max.x, y, b.max.z));
@@ -464,19 +527,20 @@ public class BuildingPlacement : MonoBehaviour
         var rect = new Rect(UiTheme.VW / 2f - w / 2f, UiTheme.VH - h - 14f, w, h);
         GUILayout.BeginArea(rect, UiTheme.Hud);
         UiTheme.Wash(rect, 0.8f);
-        GUILayout.Label("左键 放置　·　R 旋转 90°　·　滚轮 微调　·　右键/Esc 取消　·　X 回出生点", UiTheme.Text(13));
+        GUILayout.Label("左键 放置　·　R 旋转 90°　·　滚轮 微调　·　Ctrl+滚轮 缩放　·　右键/Esc 取消　·　X 回出生点", UiTheme.Text(13));
 
+        string scaleTag = _scale != 1f ? $"　·　当前 {_scale:0.00}x" : "";
         if (!_valid)
         {
-            GUILayout.Label($"<color=#9E2B25>{_invalidReason}</color>", UiTheme.Text(13));
+            GUILayout.Label($"<color=#9E2B25>{_invalidReason}</color>{scaleTag}", UiTheme.Text(13));
         }
         else if (!string.IsNullOrEmpty(_warn))
         {
-            GUILayout.Label($"<color=#8A5A00>{_warn}</color>", UiTheme.Text(13));
+            GUILayout.Label($"<color=#8A5A00>{_warn}</color>{scaleTag}", UiTheme.Text(13));
         }
         else
         {
-            GUILayout.Label("<color=#5A5042>落点可用</color>", UiTheme.Text(13));
+            GUILayout.Label($"<color=#5A5042>落点可用{scaleTag}</color>", UiTheme.Text(13));
         }
         GUILayout.EndArea();
     }

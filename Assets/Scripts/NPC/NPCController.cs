@@ -149,7 +149,7 @@ public class NPCController : MonoBehaviour
         var kb = UnityEngine.InputSystem.Keyboard.current;
         if (kb != null && kb.eKey.wasPressedThisFrame && _playerNearby
             && !CinematicIntro.IsCinematic && !CinematicIntro.InputCooldown
-            && !BuildingPlacement.Active)
+            && !BuildingPlacement.Active && !UiTextFocus.IsTyping)
         {
             if (DialogSystem.Instance == null)
             {

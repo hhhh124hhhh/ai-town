@@ -18,11 +18,25 @@ public class ApiClient : MonoBehaviour
 
     public static ApiClient Instance { get; private set; }
 
+    /// <summary>
+    /// 懒补建（同 CommissionSystem 模式）：Play 模式中途脚本重编译会洗掉 static 单例，
+    /// 而场景里已有对象的 Awake 不会重跑，Instance 将永远为 null——此处自动补一个。
+    /// </summary>
+    public static void EnsureExists()
+    {
+        if (Instance == null)
+        {
+            new GameObject("_ApiClient").AddComponent<ApiClient>();
+        }
+    }
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
         {
-            Destroy(gameObject);
+            // 只销毁多余的自身组件：本组件与 BuildingPanel 同挂 _Systems 节点，
+            // Destroy(gameObject) 会连面板一起带走
+            Destroy(this);
             return;
         }
         Instance = this;

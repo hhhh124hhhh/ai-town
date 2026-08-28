@@ -110,8 +110,9 @@ public class HeldItemUmbrella : MonoBehaviour
         if (_armCam != null && _armCam.enabled != show) _armCam.enabled = show;
         if (!show) return;
 
-        // U 键撑伞/收伞（演出刚结束的输入冷却期不响应）
+        // U 键撑伞/收伞（演出刚结束的输入冷却期不响应；打字中不抢键）
         if (!_switching && !_punching && !CinematicIntro.InputCooldown
+            && !UiTextFocus.IsTyping
             && Keyboard.current != null && Keyboard.current.uKey.wasPressedThisFrame)
         {
             ToggleUmbrella();

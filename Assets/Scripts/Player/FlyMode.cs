@@ -70,6 +70,13 @@ public class FlyMode : MonoBehaviour
     {
         if (_input == null || _cameraTarget == null) return;
 
+        // 打字/对话期间不响应移动（对话锁移动与 FirstPersonController 的处理保持一致）
+        if (UiTextFocus.IsTyping || DialogSystem.Instance != null)
+        {
+            _moveVelocity = Vector3.zero;
+            return;
+        }
+
         float speed = _input.sprint ? FlySprintSpeed : FlySpeed;
         Vector3 direction = transform.right * _input.move.x + transform.forward * _input.move.y;
         if (direction.sqrMagnitude > 1f) direction.Normalize();
@@ -90,13 +97,16 @@ public class FlyMode : MonoBehaviour
     private void CameraRotation()
     {
         if (_input == null || _cameraTarget == null) return;
-        if (_input.look.sqrMagnitude < 0.01f) return;
 
-        // 与 FirstPersonController 一致：鼠标增量不乘 deltaTime
-        _pitch += -_input.look.y * RotationSpeed;
-        _pitch = Mathf.Clamp(_pitch, -90f, 90f);
+        // 与 FirstPersonController 同号：正 pitch = 低头（符号反了会让飞行时上下视角反转）
+        if (_input.look.sqrMagnitude >= 0.01f)
+        {
+            _pitch += _input.look.y * RotationSpeed;
+            _pitch = Mathf.Clamp(_pitch, -89f, 89f);
+            transform.Rotate(Vector3.up * (_input.look.x * RotationSpeed));
+        }
 
-        // 平滑俯仰：目标角与当前角插值，减少快速甩头的眩晕感
+        // 平滑俯仰：持续向目标角收敛（鼠标停住也走完剩余行程，不再中途冻结）
         float currentPitch = _cameraTarget.transform.localEulerAngles.x;
         if (currentPitch > 180f) currentPitch -= 360f;
         float smoothedPitch = RotationSmoothing > 0f
@@ -104,7 +114,6 @@ public class FlyMode : MonoBehaviour
             : _pitch;
 
         _cameraTarget.transform.localRotation = Quaternion.Euler(smoothedPitch, 0f, 0f);
-        transform.Rotate(Vector3.up * (_input.look.x * RotationSpeed));
     }
 
     /// <summary>开启/关闭飞行并同步相关组件状态。</summary>
@@ -121,6 +130,7 @@ public class FlyMode : MonoBehaviour
             {
                 _pitch = _cameraTarget.transform.localEulerAngles.x;
                 if (_pitch > 180f) _pitch -= 360f;
+                _pitch = Mathf.Clamp(_pitch, -89f, 89f);
             }
             Debug.Log("[FlyMode] 飞行模式开启");
         }
@@ -135,6 +145,7 @@ public class FlyMode : MonoBehaviour
 
     private static float GetVerticalAxis()
     {
+        if (UiTextFocus.IsTyping) return 0f; // 打字时 Space/Ctrl 属于文本输入
         float up = 0f;
 #if ENABLE_INPUT_SYSTEM
         var kb = Keyboard.current;
@@ -153,6 +164,7 @@ public class FlyMode : MonoBehaviour
 
     private static bool TogglePressed()
     {
+        if (UiTextFocus.IsTyping || DialogSystem.Instance != null) return false; // 打字/对话中不切飞行
 #if ENABLE_INPUT_SYSTEM
         var kb = Keyboard.current;
         if (kb != null && kb.fKey.wasPressedThisFrame) return true;

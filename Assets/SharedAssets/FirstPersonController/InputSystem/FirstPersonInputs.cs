@@ -57,7 +57,8 @@ namespace StarterAssets
 #if ENABLE_INPUT_SYSTEM
 		public void OnMove(InputValue value)
 		{
-			if (m_IgnoreInput)
+			// 打字中（输入框聚焦）：移动输入归零，避免打字时角色乱动
+			if (m_IgnoreInput || UiTextFocus.IsTyping)
 			{
 				MoveInput(Vector2.zero);
 				return;
@@ -90,6 +91,11 @@ namespace StarterAssets
 
 		public void OnJump(InputValue value)
 		{
+			if (UiTextFocus.IsTyping)
+			{
+				JumpInput(false);
+				return;
+			}
 			if (CameraManager != null)
 			{
 				CameraManager.NotifyPlayerMoved();
@@ -99,6 +105,11 @@ namespace StarterAssets
 
 		public void OnSprint(InputValue value)
 		{
+			if (UiTextFocus.IsTyping)
+			{
+				SprintInput(false);
+				return;
+			}
 			if (CameraManager != null)
 			{
 				CameraManager.NotifyPlayerMoved();

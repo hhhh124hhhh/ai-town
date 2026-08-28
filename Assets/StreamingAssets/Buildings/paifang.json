@@ -2,9 +2,9 @@
   "name": "民国牌坊",
   "blocks": [
     { "shape": "box", "pos": [-10, 0, 0], "size": [1.0, 0.6, 1.4], "color": "#7A8B8B" },
-    { "shape": "box", "pos": [-10, 0.6, 0], "size": [0.7, 16, 0.7], "color": "#7A8B8B" },
+    { "shape": "box", "pos": [-10, 4.5, 0], "size": [0.7, 23.8, 0.7], "color": "#7A8B8B" },
     { "shape": "box", "pos": [10, 0, 0], "size": [1.0, 0.6, 1.4], "color": "#7A8B8B" },
-    { "shape": "box", "pos": [10, 0.6, 0], "size": [0.7, 16, 0.7], "color": "#7A8B8B" },
+    { "shape": "box", "pos": [10, 4.5, 0], "size": [0.7, 23.8, 0.7], "color": "#7A8B8B" },
     { "shape": "box", "pos": [0, 8.8, 0], "size": [21.5, 0.6, 0.5], "color": "#7A8B8B" },
     { "shape": "box", "pos": [0, 16.6, 0], "size": [21.5, 0.7, 0.6], "color": "#7A8B8B" },
     { "shape": "box", "pos": [0, 17.3, 0], "size": [22.6, 0.3, 1.2], "color": "#935116" },

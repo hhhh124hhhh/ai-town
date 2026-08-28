@@ -129,6 +129,9 @@ public class CommissionSystem : MonoBehaviour
     private Vector2 _scroll;
     private LineRenderer _zoneRing;
 
+    /// <summary>当前进行中的委托（无则 null）。对话快捷项据此动态生成。</summary>
+    public CommissionInfo ActiveCommission => _state?.active;
+
     /// <summary>懒创建（BuildingPanel.Start 调用），场景无需手动接线。</summary>
     public static void EnsureExists()
     {
@@ -396,6 +399,34 @@ public class CommissionSystem : MonoBehaviour
         CreateZoneRing(resp.commission);
         npc.ShowBubble($"委托：{resp.commission.title}（[C] 查看详情）", 8f);
         _status = $"<color=green>已接下「{resp.commission.title}」，在绿圈内用 Tab 面板建造，完成后回来提交验收</color>";
+    }
+
+    /// <summary>
+    /// 对话中接单入口（DialogSystem 调用）：玩家对 NPC 说"接个委托"即触发。
+    /// 已有进行中委托时把提示回给对话窗，不覆盖。
+    /// </summary>
+    public IEnumerator RequestCommissionFromDialog(NPCController npc)
+    {
+        if (_state?.active != null)
+        {
+            DialogSystem.Instance?.AddSystemLine(
+                $"【{npc.npcName}】你手上还有一单「{_state.active.title}」没交呢，先干完那单（[C] 看详情）。");
+            yield break;
+        }
+
+        yield return NewCo(npc);
+
+        // 接单结果同步进对话历史（NewCo 已写 _status / NPC 气泡）
+        if (_state?.active != null)
+        {
+            var a = _state.active;
+            DialogSystem.Instance?.AddSystemLine(
+                $"【{npc.npcName}】那就拜托你了——「{a.title}」：{a.desc} 建在绿圈内（{a.zoneRadius:0} 米），好了来找我（[C] 提交）。");
+        }
+        else if (!string.IsNullOrEmpty(_status))
+        {
+            DialogSystem.Instance?.AddSystemLine($"<color=#9E2B25>[系统] {_status}</color>");
+        }
     }
 
     private IEnumerator SubmitCo()

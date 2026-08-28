@@ -110,6 +110,21 @@ namespace StarterAssets
 			_fallTimeoutDelta = FallTimeout;
 		}
 
+		private void OnEnable()
+		{
+			// 飞行模式交还时相机实际朝向可能已被 FlyMode 改写：回读当前 pitch，
+			// 避免恢复行走的第一次视角输入把相机跳回内部过期值
+			SyncPitchFromCamera();
+		}
+
+		private void SyncPitchFromCamera()
+		{
+			if (CinemachineCameraTarget == null) return;
+			float pitch = CinemachineCameraTarget.transform.localEulerAngles.x;
+			if (pitch > 180f) pitch -= 360f;
+			_cinemachineTargetPitch = Mathf.Clamp(pitch, BottomClamp, TopClamp);
+		}
+
 		private void Update()
 		{
 			JumpAndGravity();

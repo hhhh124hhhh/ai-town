@@ -49,15 +49,16 @@ public class BuildingPanel : MonoBehaviour
             _busy = false;
             _status = "<color=red>生成超时已重置，再按一次回车</color>";
         }
-        if (CinematicIntro.IsCinematic || CinematicIntro.InputCooldown || BuildingPlacement.Active) return; // 演出期间/开始键那一帧不响应 Tab/回车；放置期间输入归放置模式
+        if (CinematicIntro.IsCinematic || CinematicIntro.InputCooldown) return; // 演出期间不响应
 #if ENABLE_INPUT_SYSTEM
         var kb = UnityEngine.InputSystem.Keyboard.current;
-        // Tab 永远可切换面板（不受打字门控——输入框焦点残留时 Tab 是唯一逃生口;隐藏时一并释放焦点）
+        // Tab 永远可切换面板（含放置模式——打字焦点残留/放置中都算唯一逃生口；隐藏时一并释放焦点）
         if (kb != null && kb.tabKey.wasPressedThisFrame)
         {
             _visible = !_visible;
             if (!_visible) UiTextFocus.Clear();
         }
+        if (BuildingPlacement.Active) return; // 放置期间其余输入归放置模式（回车不再触发生成）
         // 回车=生成（便携手感 + 远程测试钩子：桥 manage_input 可触发）
         // 对话框打开时让位给 DialogSystem，避免一次回车同时触发两处
         if (kb != null && kb.enterKey.wasPressedThisFrame && !_busy && _visible
@@ -73,7 +74,7 @@ public class BuildingPanel : MonoBehaviour
 
     private void OnGUI()
     {
-        if (!_visible || CinematicIntro.IsCinematic || BuildingPlacement.Active)
+        if (!_visible || CinematicIntro.IsCinematic)
         {
             // 面板不可见时不得持有键盘焦点,否则 WASD 一直打进隐藏输入框
             if (GUIUtility.keyboardControl != 0) UiTextFocus.Clear();
