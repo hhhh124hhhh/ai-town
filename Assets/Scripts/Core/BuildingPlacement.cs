@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 #if ENABLE_INPUT_SYSTEM
@@ -77,6 +78,8 @@ public class BuildingPlacement : MonoBehaviour
     private GameObject _ghost;
     private GameObject _ghostRoot;
     private LineRenderer _footRing;
+    private LineRenderer _aimMarker;                 // 地面落点菱形标记（不随建筑移动，独立指示落点）
+    private LineRenderer[] _plumbLines;              // 幽灵悬空时四角到地面的墨色垂线（工程图语言）
     private Action<GameObject> _onConfirmed;
 
     private Transform _player;
@@ -142,6 +145,8 @@ public class BuildingPlacement : MonoBehaviour
             : 0f;
 
         _footRing = CreateFootRing();
+        _aimMarker = CreateAimMarker();
+        _plumbLines = CreatePlumbLines();
         _yaw = 0f;
         _scale = 1f;
 
@@ -248,6 +253,7 @@ public class BuildingPlacement : MonoBehaviour
         {
             _invalidReason = "指向地面以选择落点";
             ApplyPose(null);
+            UpdateAimMarker(null);
             return;
         }
 
@@ -259,6 +265,7 @@ public class BuildingPlacement : MonoBehaviour
         aim = new Vector3(cx, aim.Value.y, cz);
 
         ApplyPose(aim);
+        UpdateAimMarker(aim);
         if (!_valid) return;
 
         Bounds world = WorldBounds();
@@ -297,6 +304,7 @@ public class BuildingPlacement : MonoBehaviour
         Color c = _valid ? ValidColor : InvalidColor;
         GhostMaterial.color = c;
         UpdateFootRing(c);
+        UpdatePlumbLines();
     }
 
     private bool CheckOverlap(Bounds world, out string reason)
@@ -372,12 +380,36 @@ public class BuildingPlacement : MonoBehaviour
 
     private void Confirm()
     {
-        _real.transform.SetPositionAndRotation(
-            _ghost.transform.position, _ghost.transform.rotation);
+        Vector3 finalPos = _ghost.transform.position;
+        Quaternion finalRot = _ghost.transform.rotation;
+        _real.transform.SetPositionAndRotation(finalPos, finalRot);
         _real.transform.localScale = Vector3.one * _scale; // 缩放一并落到真实建筑
         _real.SetActive(true);
+        var real = _real;
         Cleanup();
-        _onConfirmed?.Invoke(_real);
+        StartCoroutine(DropIn(real)); // 落地动画：给确认动作"重量感"（成熟放置系统标配）
+        _onConfirmed?.Invoke(real);
+    }
+
+    /// <summary>
+    /// 落地动画：建筑从半空落下砸到地面（0.3s 加速）。回调/绿圈/接路都按最终位置结算，
+    /// 动画只是视觉层偏移；协程收尾强制回精确落点，动画误差不会渗进游戏逻辑。
+    /// </summary>
+    private IEnumerator DropIn(GameObject building)
+    {
+        const float dropHeight = 2.2f;
+        const float duration = 0.3f;
+        Vector3 final = building.transform.position;
+        float t = 0f;
+        while (t < duration && building != null)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / duration);
+            k = k * k; // ease-in：越接近地面越快，落地质感
+            building.transform.position = final + Vector3.up * (dropHeight * (1f - k));
+            yield return null;
+        }
+        if (building != null) building.transform.position = final;
     }
 
     private void Cancel()
@@ -389,9 +421,19 @@ public class BuildingPlacement : MonoBehaviour
     private void Cleanup()
     {
         if (_ghostRoot != null) Destroy(_ghostRoot);
+        if (_aimMarker != null) Destroy(_aimMarker.gameObject);
+        if (_plumbLines != null)
+        {
+            foreach (var line in _plumbLines)
+            {
+                if (line != null) Destroy(line.gameObject);
+            }
+        }
         _ghost = null;
         _ghostRoot = null;
         _footRing = null;
+        _aimMarker = null;
+        _plumbLines = null;
         _real = null;
         _onConfirmed = null;
 
@@ -505,6 +547,101 @@ public class BuildingPlacement : MonoBehaviour
         DrawCrosshair();
         DrawHintBar();
         UiTheme.EndScale();
+    }
+
+    /// <summary>
+    /// 地面落点菱形标记（成熟放置系统标配：落点指示独立于建筑本体——
+    /// 动森的地面网格高亮、模拟城市的 footprint 同源设计）。贴地 y=0.06，
+    /// 颜色跟有效性走；准星指天时隐藏。
+    /// </summary>
+    private LineRenderer CreateAimMarker()
+    {
+        var go = new GameObject("_PlacementAimMarker");
+        var lr = go.AddComponent<LineRenderer>();
+        lr.loop = true;
+        lr.useWorldSpace = true;
+        lr.widthMultiplier = 0.08f;
+        lr.positionCount = 5;
+        var shader = Shader.Find("Sprites/Default");
+        if (shader != null)
+        {
+            lr.material = new Material(shader);
+            lr.startColor = ValidColor;
+            lr.endColor = ValidColor;
+        }
+        return lr;
+    }
+
+    private void UpdateAimMarker(Vector3? aim)
+    {
+        if (_aimMarker == null) return;
+        _aimMarker.enabled = aim.HasValue;
+        if (!aim.HasValue) return;
+
+        // 有效色随当前判定刷新（先摆姿势后刷新颜色的顺序依赖 UpdateFootRing）
+        Color c = _valid ? ValidColor : InvalidColor;
+        _aimMarker.startColor = c;
+        _aimMarker.endColor = c;
+
+        const float r = 0.7f;
+        float y = 0.06f;
+        _aimMarker.SetPosition(0, new Vector3(aim.Value.x, y, aim.Value.z - r));
+        _aimMarker.SetPosition(1, new Vector3(aim.Value.x + r, y, aim.Value.z));
+        _aimMarker.SetPosition(2, new Vector3(aim.Value.x, y, aim.Value.z + r));
+        _aimMarker.SetPosition(3, new Vector3(aim.Value.x - r, y, aim.Value.z));
+        _aimMarker.SetPosition(4, new Vector3(aim.Value.x, y, aim.Value.z - r));
+    }
+
+    /// <summary>
+    /// 悬空垂线（4 条）：幽灵底部高于地面时，从脚印四角垂到地面。
+    /// 工程制图的墨线语言，一眼看出"落点在哪、悬空多高"——数据异常时也兜底可见。
+    /// </summary>
+    private LineRenderer[] CreatePlumbLines()
+    {
+        var lines = new LineRenderer[4];
+        var shader = Shader.Find("Sprites/Default");
+        for (int i = 0; i < 4; i++)
+        {
+            var go = new GameObject($"_PlacementPlumb{i}");
+            var lr = go.AddComponent<LineRenderer>();
+            lr.useWorldSpace = true;
+            lr.widthMultiplier = 0.03f;
+            lr.positionCount = 2;
+            if (shader != null)
+            {
+                lr.material = new Material(shader);
+                var ink = new Color(0.16f, 0.15f, 0.13f, 0.75f); // 淡墨
+                lr.startColor = ink;
+                lr.endColor = ink;
+            }
+            lr.enabled = false;
+            lines[i] = lr;
+        }
+        return lines;
+    }
+
+    private void UpdatePlumbLines()
+    {
+        if (_plumbLines == null || _ghost == null) return;
+        float bottomY = _ghost.transform.position.y + _localBounds.min.y * _scale;
+        bool show = _valid && bottomY > 0.15f; // 正常贴地（≤路网/广场垫层）不画
+        var b = WorldBounds();
+        var corners = new Vector3[]
+        {
+            new Vector3(b.min.x, bottomY, b.min.z),
+            new Vector3(b.max.x, bottomY, b.min.z),
+            new Vector3(b.max.x, bottomY, b.max.z),
+            new Vector3(b.min.x, bottomY, b.max.z),
+        };
+        for (int i = 0; i < _plumbLines.Length; i++)
+        {
+            var lr = _plumbLines[i];
+            if (lr == null) continue;
+            lr.enabled = show;
+            if (!show) continue;
+            lr.SetPosition(0, corners[i]);
+            lr.SetPosition(1, new Vector3(corners[i].x, 0.06f, corners[i].z));
+        }
     }
 
     private void DrawCrosshair()
