@@ -114,7 +114,7 @@ public static class UiTheme
         // 内边距必须大于木框在屏上的实际厚度（约 32px），且 ≥1 字高——否则文字压木纹上看不清
         _panelBox = MakeBox(_panel != null ? _panel : _solidPaper, border24, 36,
             Ink, 15);
-        _hudBox = MakeBox(_hud != null ? _hud : _solidPaper, border16, 16,
+        _hudBox = MakeBox(_hud != null ? _hud : _solidPaper, border16, 20,
             Ink, 14);
         _cardBox = MakeBox(_card != null ? _card : _solidPaper, border12, 18,
             Ink, 14);

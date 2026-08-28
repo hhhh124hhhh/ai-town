@@ -232,16 +232,20 @@ public class CommissionSystem : MonoBehaviour
 
     private void DrawHud()
     {
+        const float Pad = 20f; // 与 UiTheme.Hud 的 padding 一致
         var st = UiTheme.Text(13);
+        var active = _state.active;
         string line1 = $"<b>★{_state.level} {_state.levelName}</b>　繁荣 {_state.prosperity}　大洋 {_state.gold}　完成 {_state.completed} 单";
-        string line2 = _state.active != null ? $"<color=#9E2B25><b>委托：{_state.active.npc} · {_state.active.title}</b></color>（[C] 面板）" : null;
+        string line2 = active != null
+            ? $"<color=#9E2B25><b>委托：{(string.IsNullOrEmpty(active.npc) ? "" : active.npc + " · ")}{(string.IsNullOrEmpty(active.title) ? "进行中" : active.title)}</b></color>（[C] 面板）"
+            : null;
 
-        // 按内容自适应盒子大小：文字永不溢出、不贴屏缘（测量用不换行副本）
+        // 按内容自适应：宽度=最长行+对称 padding；高度=上下 padding+行高+IMGUI 间距余量
         var measure = new GUIStyle(st) { wordWrap = false };
         var s1 = measure.CalcSize(new GUIContent(line1));
         var s2 = line2 != null ? measure.CalcSize(new GUIContent(line2)) : Vector2.zero;
-        float w = Mathf.Max(200f, Mathf.Max(s1.x, s2.x)) + 40f; // +左右 padding
-        float h = (line2 != null ? s1.y + s2.y + 4f : s1.y) + 24f;
+        float w = Mathf.Max(240f, Mathf.Max(s1.x, s2.x)) + Pad * 2f + 10f;
+        float h = Pad * 2f + s1.y + (line2 != null ? s2.y + 4f : 0f) + 10f;
         _hudBottom = 16f + h;
 
         var rect = new Rect(UiTheme.VW - w - 16f, 16f, w, h);
@@ -357,6 +361,7 @@ public class CommissionSystem : MonoBehaviour
 
     private IEnumerator NewCo(NPCController npc)
     {
+        ApiClient.EnsureExists(); // Play 中途脚本重载会洗掉单例，先懒补建
         if (ApiClient.Instance == null)
         {
             _status = "<color=red>场景中没有 ApiClient</color>";
