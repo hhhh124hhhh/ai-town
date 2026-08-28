@@ -250,7 +250,7 @@ public class CommissionSystem : MonoBehaviour
 
         var rect = new Rect(UiTheme.VW - w - 16f, 16f, w, h);
         GUILayout.BeginArea(rect, UiTheme.Hud);
-        UiTheme.Wash(rect, 0.8f);
+        UiTheme.Wash(rect, 0.95f); // hud_bg 贴图自带抽屉纹/铜钱装饰,0.8 压不住会透出来和文字相叠,近实底才素净
         GUILayout.Label(line1, st);
         if (line2 != null) GUILayout.Label(line2, st);
         GUILayout.EndArea();
