@@ -225,6 +225,9 @@ public static class UiTheme
     /// 装饰纹理（设计稿残影），深色文字不再压在木框/花纹上。alpha 越大越素净。
     /// 用内置 whiteTexture+GUI.color 染色：运行时 new 的 Texture2D 在团结引擎下会被
     /// 置空（实测 Wash 报 null texture），内置贴图永不失效。
+    /// **契约：只能在 GUILayout.BeginArea 内调用**——内部从 (0,0) 画，依赖 BeginArea
+    /// 的局部坐标系。裸调（无 BeginArea）会把纸画到屏幕左上角（信笺 bug 判例 2026-08-29），
+    /// 自绘场景一律直接 GUI.DrawTexture(rect, Texture2D.whiteTexture)。
     /// </summary>
     public static void Wash(Rect areaRect, float alpha = 0.88f)
     {
