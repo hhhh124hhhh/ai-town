@@ -4,7 +4,7 @@ import io
 import sys
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
-from commission_ai import CommissionManager, _resolve_type
+from commission_ai import CommissionManager, _resolve_type, ARCHETYPES
 
 m = CommissionManager()
 ok = fail = 0
@@ -27,12 +27,13 @@ check("template windmill→windmill", _resolve_type("windmill", "") == "windmill
 check("template rocket→spaceship", _resolve_type("rocket", "") == "spaceship")
 check("乱模板→None", _resolve_type("ta城堡", "") is None)
 
-print("== 发单（老王第1单=烤炉房 house）==")
+print("== 发单（老王第1单，类型随 ARCHETYPES 序列）==")
 c, err = m.new("面包师老王", [3.75, 0, -4.2])
+_want_type = ARCHETYPES["面包师老王"][0]["type"]  # 首单类型（radius 政策 2026-08-29: 25-2*completed）
 check("发单成功", c is not None and err is None, err or c["title"])
-check("类型 house", c["type"] == "house")
+check(f"类型 {_want_type}", c["type"] == _want_type)
 check("zoneCenter=NPC坐标", abs(c["zoneX"] - 3.75) < 0.01 and abs(c["zoneZ"] + 4.2) < 0.01)
-check("初始半径18", c["zoneRadius"] == 18.0)
+check("初始半径25", c["zoneRadius"] == 25.0)
 check("有风味文本", len(c["desc"]) > 5)
 c2, err2 = m.new("守卫铁山", [0, 0, -3.2])
 check("进行中不可再发单", c2 is None and "进行中" in (err2 or ""))
@@ -47,11 +48,11 @@ check("未通过", r["pass"] is False)
 check("reasons 指出类型/距离", any("类型" in x for x in r["reasons"]) and any("距离" in x for x in r["reasons"]), r["reasons"])
 check("无奖励", r["rewardGold"] == 0)
 
-print("== 提交：正确（大房屋 建在 NPC 附近）→ 过 ==")
+print("== 提交：正确（匹配首单类型 建在 NPC 附近）→ 过 ==")
 r, e = m.submit([
     {"name": "红色城堡", "description": "建一个红色大城堡", "template": "",
      "blockCount": 18, "pos": [40, 0, 40], "extents": [11, 9, 11]},  # 干扰项：应被忽略
-    {"name": "大房屋", "description": "建一个大的房屋", "template": "",
+    {"name": "正确建筑", "description": f"建一个大的{_want_type}", "template": _want_type,
      "blockCount": 12, "pos": [5.5, 0, -2.0], "extents": [10, 5, 10]},
 ])
 check("通过（多建筑取最优）", r["pass"] is True, r["reasons"])
@@ -64,11 +65,11 @@ check("好感+10=10 熟识", s["npcs"][0]["affinity"] == 10 and s["npcs"][0]["af
 check("active 已清空", s["active"] is None)
 check("NPC 记忆已写入", any("委托" in mm.get("user", "") for mm in __import__("npc_ai").manager.npcs["面包师老王"]["memory"]))
 
-print("== 铁山第1单=瞭望塔 tower，半径随完成数收紧 18-2=16 ==")
+print("== 铁山第1单=瞭望塔 tower，半径随完成数收紧 25-2=23 ==")
 c, err = m.new("守卫铁山", [0, 0, -3.2])
 check("发单成功", c is not None, err or "")
 check("类型 tower", c["type"] == "tower")
-check("半径16", c["zoneRadius"] == 16.0, c["zoneRadius"])
+check("半径23", c["zoneRadius"] == 23.0, c["zoneRadius"])
 r, e = m.submit([{"name": "高塔", "description": "", "template": "tower",
                   "blockCount": 3, "pos": [0, 0, -10], "extents": [6, 25, 6]}])
 check("模板通道 tower 通过", r["pass"] is True, r["reasons"])

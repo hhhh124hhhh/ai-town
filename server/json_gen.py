@@ -76,6 +76,24 @@ def _roof_flat(blocks, w, h0, color):
     _hex_box(blocks, 0, h0, 0, 2 * w + 0.6, 0.5, 2 * w + 0.6, color)
 
 
+def _load_prebuilt(btype):
+    """castle/paifang/qilou 直读 StreamingAssets 同款 JSON（与场景内建筑一致）。
+    utf-8-sig 兼容带 BOM 的资产文件；缺失/解析失败返回 None 走程序化生成。"""
+    import json as _json
+    import os as _os
+    root = _os.path.dirname(_os.path.abspath(__file__))
+    path = _os.path.normpath(_os.path.join(
+        root, "..", "Assets", "StreamingAssets", "Buildings", f"{btype}.json"))
+    if not _os.path.isfile(path):
+        return None
+    try:
+        with open(path, "r", encoding="utf-8-sig") as f:
+            data = _json.load(f)
+        return data if data.get("blocks") else None
+    except (ValueError, OSError):
+        return None
+
+
 def gen_building(params):
     """主入口：nlp.parse_input 的 params → Unity JSON dict。"""
     btype = params.get("type") or "house"
@@ -83,6 +101,12 @@ def gen_building(params):
     s = SIZE_STEPS[params.get("size", 1)] if 0 <= params.get("size", 1) < 4 else 1.0
     name_zh = {"castle": "老洋楼", "house": "小屋", "tower": "高塔", "pagoda": "宝塔", "pyramid": "金字塔", "qilou": "骑楼", "paifang": "牌坊", "xitai": "戏台", "gulou": "鼓楼"}
     name = name_jh = f"{params.get('color') or params.get('material') or ''}{name_zh.get(btype, btype)}"
+
+    # 三个有 StreamingAssets 成品的模板优先直读（与场景内建筑同款）；默认尺寸时才生效
+    if btype in ("castle", "paifang", "qilou") and s == 1.0:
+        pre = _load_prebuilt(btype)
+        if pre:
+            return pre
 
     blocks = []
     h = int(8 * s)
