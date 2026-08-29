@@ -161,6 +161,7 @@ public class CommissionSystem : MonoBehaviour
     {
         RefreshNpcCache();
         StartCoroutine(RefreshStateCo());
+        StartCoroutine(PollStateCo()); // 10s 静默轮询：服务器重启后 UI 不再精神分裂
     }
 
     private void RefreshNpcCache()
@@ -213,6 +214,46 @@ public class CommissionSystem : MonoBehaviour
     }
 
     private float _zoneHintCooldownUntil;
+
+    // ── 状态轮询（2026-08-29 "UI 有单服务器无单"判例）────────────────────
+    // _state 是本地缓存，python 重启=服务器清零但客户端永远显示旧快照（HUD"进行中"、
+    // NPC 说有单、箭头/绿圈却消失——三方精神分裂）。10s 静默轮询以服务器为准对齐。
+    private float _nextPollAt;
+    private bool _hadActive; // 上一帧是否本地认为有单（检测"单消失"边沿提示）
+
+    private IEnumerator PollStateCo()
+    {
+        while (true)
+        {
+            yield return new WaitForSecondsRealtime(10f);
+            if (ApiClient.Instance == null || _busy) continue;
+            string json = null;
+            yield return ApiClient.Instance.GetCommissionState(
+                j => json = j, _ => { });
+            if (json == null) continue; // 轮询失败保持现状（离线态不折腾）
+            var resp = JsonUtility.FromJson<StateResponse>(json);
+            if (resp == null || !resp.ok) continue;
+
+            bool hadActive = _state?.active != null;
+            _state = resp.state;
+            _fetched = true;
+            _offline = false;
+
+            // 边沿检测：本地有单→服务器没了（服务器重启/被清），提示并撤引导
+            if (hadActive && _state.active == null)
+            {
+                DestroyZoneRing();
+                _builds.Clear();
+                ShowTopHint("委托记录已失效（服务重启）——按 [C] 重新接单", 8f);
+            }
+            // 单还在但 zone 漂了/首次见到单：对齐绿圈
+            else if (_state.active != null && _zoneRing == null)
+            {
+                ResolveZonePlacement(_state.active);
+                CreateZoneRing(_state.active);
+            }
+        }
+    }
 
     /// <summary>BuildingPanel 每次生成建筑后登记，验收时统一上报（服务端取最优匹配）。</summary>
     public void RegisterBuild(string name, string description, string template, int blockCount, Transform root)
