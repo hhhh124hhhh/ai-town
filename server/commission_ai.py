@@ -148,7 +148,9 @@ class CommissionManager:
         if not data:
             return
         try:
-            self.active = data.get("active")
+            # 2026-08-29 修复：不恢复 active 委托（开局干净，玩家主动找 NPC 接）
+            # 只恢复进度数据（completed/gold/prosperity/affinity/unlocked）
+            self.active = None  # 强制清空，不恢复
             self.completed = int(data.get("completed", 0))
             self.gold = int(data.get("gold", 0))
             self.prosperity = int(data.get("prosperity", 0))
