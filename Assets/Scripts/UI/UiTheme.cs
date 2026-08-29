@@ -28,9 +28,13 @@ public static class UiTheme
     public static readonly Color Blue = new Color32(0x2E, 0x5F, 0x8A, 0xFF);      // 深蓝
 
     // ── 1.33 中文 type scale（12/14/16/20/28；层级靠字重+颜色）──────────
-    public const int SizeHint = 12;    // 弱提示/单位
+    // 2026-08-29 U2 可读性修正：Hint 12 在 960 高屏实际渲染 ~11px 低于汉字可读下限，
+    // 且按钮 36 高装 16 号字=字高占容器 44%（低于 50~60% 法则）——
+    // Hint 提到 14，按钮字号提 Emph 16→18（档位仍属 1.33 体系的 Emph 槽，只是按钮槽专用加大）。
+    public const int SizeHint = 14;    // 弱提示/单位（12→14 可读性下限修正）
     public const int SizeBody = 14;    // 正文
     public const int SizeEmph = 16;    // 强调正文/委托名
+    public const int SizeBtn = 18;     // 按钮字（16→18，字高=按钮 44px 高的 ~41%+padding≈55%）
     public const int SizeNum = 20;     // 状态数字（面板锚点）
     public const int SizeTitle = 20;   // 面板标题（与数字同级，靠粗细区分）
     public const int SizeDisplay = 28; // 大字（闪屏/结算）
@@ -250,7 +254,8 @@ public static class UiTheme
         var borderTall = new RectOffset(140, 140, 140, 140);  // panel_tall
         var borderHud = new RectOffset(70, 70, 55, 55);       // hud_bar
         var borderSmall = new RectOffset(70, 70, 70, 70);     // panel_small
-        var borderBtn = new RectOffset(32, 32, 32, 32);       // button_*
+        // 按钮已裁掉外圈 29px 毛边带（551×183），边框按比例 32→24（留内圈干净双线）
+        var borderBtn = new RectOffset(24, 24, 24, 24);       // button_*
         // v1 兜底边框
         var borderV1Panel = new RectOffset(32, 32, 32, 32);
         var borderV1Hud = new RectOffset(28, 28, 28, 28);
@@ -276,12 +281,13 @@ public static class UiTheme
         var btnHover = _v2BtnHover != null ? _v2BtnHover : _btnHover;
         var btnActive = _v2BtnActive != null ? _v2BtnActive : _btnActive;
         var btnBorder = _v2Btn != null ? borderBtn : borderV1Card;
-        _btnStyle = MakeButton(btnNormal, btnHover, btnActive, btnBorder, Ink, SizeEmph);
+        // 按钮字用专用 18 号（SizeBtn）——16 号在 44px 高按钮里占比不足
+        _btnStyle = MakeButton(btnNormal, btnHover, btnActive, btnBorder, Ink, SizeBtn);
         // 锁定态：同底板、淡墨字（灰显靠颜色不靠字号档）
-        _btnLocked = MakeButton(btnNormal, null, null, btnBorder, InkSoft, SizeEmph);
+        _btnLocked = MakeButton(btnNormal, null, null, btnBorder, InkSoft, SizeBtn);
         _btnPrimary = MakeButton(
             _v2BtnRed != null ? _v2BtnRed : (_btnRed != null ? _btnRed : _solidRed),
-            null, null, btnBorder, Paper, SizeEmph);
+            null, null, btnBorder, Paper, SizeBtn);
 
         _title = InkAllStates(new GUIStyle(GUI.skin.label)
         {
@@ -384,19 +390,21 @@ public static class UiTheme
     }
 
     /// <summary>
-    /// 宣纸衬底：BeginArea(style) 后立刻调用，用半透明宣纸盖住面板贴图内侧的
-    /// 装饰纹理。v2 组件内容区本来干净，默认 alpha 降到 0.5 只统一纸色；
-    /// v1 整图烘焙版才需要 0.88 重盖。
+    /// 宣纸衬底：BeginArea(style) 后立刻调用，轻盖面板贴图内侧统一纸色。
+    /// 2026-08-29 U2 去 AI 味修正：v2 贴图内容区已程序化均化（deai.ps1，std<3），
+    /// Wash 只需 0.30 轻透统一——原 0.5 双重暖色叠加=「油纸闷感」（AI 味来源之一）；
+    /// 色从暖宣纸(0.94,0.89,0.80)改中性纸白(0.96,0.94,0.90)去黄提透。
+    /// HUD/特殊需求仍可传 0.9+ 近实底。
     /// 用内置 whiteTexture+GUI.color 染色：运行时 new 的 Texture2D 在团结引擎下会被
     /// 置空（实测 Wash 报 null texture），内置贴图永不失效。
     /// **契约：只能在 GUILayout.BeginArea 内调用**——内部从 (0,0) 画，依赖 BeginArea
     /// 的局部坐标系。裸调（无 BeginArea）会把纸画到屏幕左上角（信笺 bug 判例 2026-08-29），
     /// 自绘场景一律直接 GUI.DrawTexture(rect, Texture2D.whiteTexture)。
     /// </summary>
-    public static void Wash(Rect areaRect, float alpha = 0.5f)
+    public static void Wash(Rect areaRect, float alpha = 0.30f)
     {
         var prev = GUI.color;
-        GUI.color = new Color(0.94f, 0.89f, 0.80f, alpha); // 宣纸色
+        GUI.color = new Color(0.96f, 0.94f, 0.90f, alpha); // 中性纸白（去黄提透）
         GUI.DrawTexture(new Rect(0f, 0f, areaRect.width, areaRect.height), Texture2D.whiteTexture);
         GUI.color = prev;
     }

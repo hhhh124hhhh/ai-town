@@ -248,7 +248,7 @@ public class DialogSystem : MonoBehaviour
         GUILayout.BeginHorizontal();
         foreach (var (label, question) in _quickAsks)
         {
-            if (GUILayout.Button(label, UiTheme.Btn, GUILayout.Height(36f)) && !_waitingReply)
+            if (GUILayout.Button(label, UiTheme.Btn, GUILayout.Height(44f)) && !_waitingReply)
             {
                 StartCoroutine(SendCo(question));
             }

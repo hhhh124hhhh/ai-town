@@ -412,12 +412,12 @@ public class CommissionSystem : MonoBehaviour
             GUILayout.FlexibleSpace();
             GUILayout.BeginHorizontal();
             GUI.enabled = !_busy && _builds.Count > 0;
-            if (GUILayout.Button($"提 交 验 收（已建 {_builds.Count} 栋）", UiTheme.BtnPrimary, GUILayout.Height(40f)))
+            if (GUILayout.Button($"提 交 验 收（已建 {_builds.Count} 栋）", UiTheme.BtnPrimary, GUILayout.Height(44f)))
             {
                 StartCoroutine(SubmitCo());
             }
             GUI.enabled = !_busy;
-            if (GUILayout.Button("放弃委托", UiTheme.Btn, GUILayout.Height(40f)))
+            if (GUILayout.Button("放弃委托", UiTheme.Btn, GUILayout.Height(44f)))
             {
                 StartCoroutine(AbandonCo());
             }

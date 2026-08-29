@@ -97,7 +97,7 @@ public class BuildingPanel : MonoBehaviour
         GUILayout.Label("AI 建筑生成  <color=#5A5042>(Tab 隐藏)</color>", UiTheme.Title);
         GUILayout.Space(8f);
 
-        _input = GUILayout.TextField(_input, UiTheme.Field, GUILayout.Height(36f));
+        _input = GUILayout.TextField(_input, UiTheme.Field, GUILayout.Height(44f));
         _inputFieldRect = GUILayoutUtility.GetLastRect();
         _inputFocused = GUIUtility.keyboardControl != 0;
 
@@ -131,7 +131,7 @@ public class BuildingPanel : MonoBehaviour
                 GUI.enabled = !_busy && unlocked;
                 // 锁定模板灰显：淡墨字+🔒前缀（层级靠颜色区分，不加字号档）
                 if (GUILayout.Button(unlocked ? Templates[idx].zh : "🔒" + Templates[idx].zh,
-                    unlocked ? UiTheme.Btn : UiTheme.BtnLocked, GUILayout.Height(36f)))
+                    unlocked ? UiTheme.Btn : UiTheme.BtnLocked, GUILayout.Height(44f)))
                 {
                     selected = idx;
                     AudioManager.Play("SFX_Click");
@@ -147,7 +147,7 @@ public class BuildingPanel : MonoBehaviour
             StartCoroutine(GenerateCo(null, Templates[selected].id));
         }
 
-        if (GUILayout.Button("清除全部建筑", UiTheme.Btn, GUILayout.Height(36f)))
+        if (GUILayout.Button("清除全部建筑", UiTheme.Btn, GUILayout.Height(44f)))
         {
             AudioManager.Play("SFX_Click");
             if (BuildingManager.Instance != null)
