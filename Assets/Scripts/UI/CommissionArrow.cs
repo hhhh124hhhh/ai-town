@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -38,24 +39,32 @@ public class CommissionArrow : MonoBehaviour
         go.SetActive(false); // 无目标时隐形，不占渲染
     }
 
-    /// <summary>三角箭头+尾杆组合网格（+Z 为指向，水平面内）。</summary>
+    /// <summary>十字翼箭头：同一箭形在水平面（XZ）+ 垂直面（XY）各一份、同指 +Z。
+    /// 玩家视线接近水平，单张水平薄片会被侧对成一条线（2026-08-29 "箭头看不到"根因），
+    /// 交叉翼保证任意俯仰角至少一面正对视线。</summary>
     private static Mesh BuildArrowMesh()
     {
-        // 顶点（XZ 平面，+Z 前）：箭头三角（0,1,2）+ 尾杆矩形（3,4,5,6）
-        var verts = new Vector3[]
+        var verts = new List<Vector3>(14);
+        var tris = new List<int>(18);
+
+        // 箭形轮廓（指向 +Z，横向展幅 0.42）：头三角 + 尾杆矩形，给定平面写入
+        void AddArrow(bool vertical)
         {
-            new(0f, 0f, 0.9f),  new(-0.42f, 0f, -0.1f), new(0.42f, 0f, -0.1f), // 头
-            new(-0.16f, 0f, -0.1f), new(-0.16f, 0f, -0.9f),                     // 杆左
-            new(0.16f, 0f, -0.1f),  new(0.16f, 0f, -0.9f),                      // 杆右
-        };
-        var tris = new int[]
-        {
-            0, 1, 2,        // 箭头（逆时针朝上）
-            3, 4, 5,  5, 4, 6, // 尾杆两三角
-        };
+            Vector3 P(float along, float side) => vertical
+                ? new Vector3(0f, side, along)   // XY 竖直面
+                : new Vector3(side, 0f, along);  // XZ 水平面
+            int b = verts.Count;
+            verts.Add(P(0.9f, 0f)); verts.Add(P(-0.1f, -0.42f)); verts.Add(P(-0.1f, 0.42f)); // 头
+            verts.Add(P(-0.1f, -0.16f)); verts.Add(P(-0.9f, -0.16f));                        // 杆
+            verts.Add(P(-0.1f, 0.16f)); verts.Add(P(-0.9f, 0.16f));
+            tris.AddRange(new[] { b, b + 1, b + 2, b + 3, b + 4, b + 5, b + 5, b + 4, b + 6 });
+        }
+        AddArrow(false);
+        AddArrow(true);
+
         var mesh = new Mesh { name = "CommissionArrow" };
-        mesh.vertices = verts;
-        mesh.triangles = tris;
+        mesh.vertices = verts.ToArray();
+        mesh.triangles = tris.ToArray();
         mesh.RecalculateNormals();
         return mesh;
     }
@@ -92,14 +101,15 @@ public class CommissionArrow : MonoBehaviour
 
         if (!gameObject.activeSelf) gameObject.SetActive(true);
 
-        // 悬浮玩家前方 3m、高 2m，水平指向目标；轻微上下浮动（呼吸感，识别度高于静止）
+        // 悬浮玩家前方 3m、高 2.2m，水平指向目标；轻微上下浮动（呼吸感，识别度高于静止）
         Vector3 dir3 = new Vector3(_target.Value.x - pp.x, 0f, _target.Value.y - pp.y);
         if (dir3.sqrMagnitude < 0.01f) return;
         dir3.Normalize();
         float bob = Mathf.Sin(Time.unscaledTime * 2.2f) * 0.08f;
         transform.position = new Vector3(
-            _player.position.x + dir3.x * 3f, 2f + bob, _player.position.z + dir3.z * 3f);
+            _player.position.x + dir3.x * 3f, 2.2f + bob, _player.position.z + dir3.z * 3f);
         transform.rotation = Quaternion.LookRotation(dir3, Vector3.up);
+        transform.localScale = Vector3.one * 1.4f;
 
         // 朝向相机的面可见性兜底：单面 Mesh 背对相机时会隐形，用双面材质更稳——
         // 这里直接按相机在箭头哪一侧翻转法线不可行（Sprites/Default 已双面），跳过

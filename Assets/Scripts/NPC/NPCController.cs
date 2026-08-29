@@ -37,6 +37,7 @@ public class NPCController : MonoBehaviour
     private bool _playerNearby;
     private string _bubbleText = "";
     private float _bubbleUntil;
+    private Collider _col;
 
     /// <summary>当前是否与玩家对话中（DialogSystem 打开着）。</summary>
     public bool InConversation { get; set; }
@@ -44,6 +45,7 @@ public class NPCController : MonoBehaviour
     private void Awake()
     {
         _player = GameObject.Find("Player")?.transform;
+        _col = GetComponent<Collider>();
         if (usePlaceholderBody) BuildBody();
         else BindExistingModel();
     }
@@ -106,7 +108,16 @@ public class NPCController : MonoBehaviour
             if (_player == null) return;
         }
 
-        float dist = Vector3.Distance(transform.position, _player.position);
+        // 交互距离用碰撞体最近点而非根 transform（2026-08-29 铁山"新位置不能交互"根因）：
+        // Tripo 模型（蓝机器人）可视体与根 pivot 有偏移，玩家走到看得见的模型身边时
+        // 离根点仍 >3m → E 静默失效。ClosestPoint 让"走到看得见的位置"永远可交互。
+        Vector3 interactAnchor = transform.position;
+        if (_col != null && _col.enabled)
+        {
+            var cp = _col.ClosestPoint(_player.position);
+            if (cp.sqrMagnitude > 0.0001f) interactAnchor = cp;
+        }
+        float dist = Vector3.Distance(interactAnchor, _player.position);
         _playerNearby = dist <= interactRange;
 
         // 朝向：靠近/对话时才"重新锁定"目标朝向，转身用 SmoothDampAngle 自然加减速；
