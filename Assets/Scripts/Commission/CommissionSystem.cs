@@ -221,16 +221,77 @@ public class CommissionSystem : MonoBehaviour
     {
         if (CinematicIntro.IsCinematic) return; // 开场演出期间 HUD/面板不显示
 
+        // 单一真源（同 BuildingPanel）：可见性每帧从协调器派生，对话开/关等外部状态
+        // 变化立即生效，不留按键时刻的过期拷贝（"面板乱跳"判例 2026-08-29）
+        _panelVisible = UiPanelLayout.CommissionVisible;
+
         UiTheme.BeginScale();
         DrawFlash();
 
         if (!_offline && _fetched) DrawHud();
+        else if (_offline) DrawOfflineHint(); // 审计口诀第四条：异常要带"该怎么做"
 
         if (_panelVisible)
         {
             DrawPanel();
         }
+        else
+        {
+            DrawSubmitHint(); // 面板关着时引导提交（打开时按钮可见，无需引导条）
+        }
         UiTheme.EndScale();
+    }
+
+    private float _submitHintUntil;
+    private string _submitHintBuilding = "";
+
+    /// <summary>服务离线提示（demo 现场保命条）：只有负反馈会让人困惑，必须带行动方案。
+    /// 委托/HUD 依赖本地 Python 服务；建造（Tab）离线可用，此条只指路不影响主演示。</summary>
+    private static void DrawOfflineHint()
+    {
+        string txt = "委托服务未连接——双击 server/start_server.bat 后重开 C 面板";
+        var st = UiTheme.Hint;
+        var measure = new GUIStyle(st) { wordWrap = false };
+        var s = measure.CalcSize(new GUIContent(txt));
+        float w = s.x + 32f;
+        float h = s.y + 14f;
+        var rect = new Rect((UiTheme.VW - w) / 2f, 16f, w, h); // 顶部中央（离线时 HUD 缺位）
+        GUILayout.BeginArea(rect);
+        UiTheme.PaperCard(rect, 0.9f);
+        GUILayout.Space(5f);
+        GUILayout.Label(txt, st);
+        GUILayout.EndArea();
+    }
+
+    /// <summary>
+    /// 生成落位后由 BuildingPanel 调用：有进行中委托时顶部中央引导「按 C 提交验收」。
+    /// 生成后面板已自动隐藏（按键驱动定则），完成提示必须挂在常驻 HUD 层——
+    /// 否则玩家落成后屏幕上零引导，不知道验收入口在哪（2026-08-29"没人验收"判例）。
+    /// </summary>
+    public void NotifyPlacedForCommission(string buildingName)
+    {
+        if (_state?.active == null) return; // 没接单不引导（自由建造模式）
+        _submitHintBuilding = buildingName;
+        _submitHintUntil = Time.unscaledTime + 9f;
+    }
+
+    /// <summary>顶部中央提交引导条（素纸卡，与 HUD 同语言）。</summary>
+    private void DrawSubmitHint()
+    {
+        if (Time.unscaledTime >= _submitHintUntil || _state?.active == null) return;
+        string txt = $"「{_state.active.title}」已落成——按 [C] 提交验收";
+        var st = UiTheme.Text(UiTheme.SizeEmph);
+        var measure = new GUIStyle(st) { wordWrap = false };
+        var s = measure.CalcSize(new GUIContent(txt));
+        float w = s.x + 48f;
+        float h = s.y + 20f;
+        // 顶部中央（左右上角被 HUD/键位卡占位，底部中央是功能坞位；顶部中空闲且视线起点）
+        var rect = new Rect((UiTheme.VW - w) / 2f, 16f, w, h);
+        GUILayout.BeginArea(rect);
+        UiTheme.PaperCard(rect, 0.94f);
+        GUILayout.Space(8f);
+        GUILayout.Label(txt, st);
+        GUILayout.EndArea();
     }
 
     private float _hudBottom = 100f; // HUD 实际底边（自适应后），委托面板挂其下方
@@ -243,32 +304,116 @@ public class CommissionSystem : MonoBehaviour
 
     private void DrawHud()
     {
-        const float Pad = 20f;
+        const float Pad = 16f;
         var st = UiTheme.Text(UiTheme.SizeBody);
         var active = _state.active;
-        string line1 = $"<b>★{_state.level} {_state.levelName}</b>　繁荣 {_state.prosperity}　大洋 {_state.gold}　完成 {_state.completed} 单";
-        string line2 = active != null
-            ? $"<color=#9E2B25><b>委托：{(string.IsNullOrEmpty(active.npc) ? "" : active.npc + " · ")}{(string.IsNullOrEmpty(active.title) ? "进行中" : active.title)}</b></color>（[C] 面板）"
-            : null;
 
-        // 按内容自适应：宽度=最长行+对称 padding；高度=上下 padding+行高+IMGUI 间距余量
+        // ── 数值变化检测（审计口诀第三条：数字不能静跳）──
+        TrackValueChange(ref _goldAnim, _state.gold);
+        TrackValueChange(ref _prosperityAnim, _state.prosperity);
+
+        string line1 = $"<b>★{_state.level} {_state.levelName}</b>　繁荣 {_state.prosperity}　大洋 {_state.gold}　完成 {_state.completed} 单";
+        string line2 = BuildCommissionLine(active);
+
+        // 按内容自适应：宽度=最长行+对称 padding；高度=上下 padding+行高
         var measure = new GUIStyle(st) { wordWrap = false };
         var s1 = measure.CalcSize(new GUIContent(line1));
         var s2 = line2 != null ? measure.CalcSize(new GUIContent(line2)) : Vector2.zero;
-        float w = Mathf.Max(240f, Mathf.Max(s1.x, s2.x)) + Pad * 2f + 10f;
-        float h = Pad * 2f + s1.y + (line2 != null ? s2.y + 4f : 0f) + 10f;
+        float w = Mathf.Max(240f, Mathf.Max(s1.x, s2.x)) + Pad * 2f;
+        float h = Pad * 2f + s1.y + (line2 != null ? s2.y + 4f : 0f);
         _hudBottom = 16f + h;
 
-        // HUD 均衡布局（2026-08-29 用户定则）：左上=游戏状态（玩家第一眼扫左上），
-        // 右上让给系统/键位提示卡，底部中央=功能坞，委托弹窗居中——对称弹窗+均衡 HUD。
-        var rect = new Rect(UiTheme.RightMargin, 16f, w, h);
-        GUILayout.BeginArea(rect, UiTheme.Hud);
-        UiTheme.Wash(rect, 0.95f); // HUD 信息行多、v2 贴图也有纸纹，近实底才素净
-        GUILayout.Label(line1, st);
+        // HUD 均衡布局：左上=游戏状态，右上=键位卡，底部中央=功能坞，委托弹窗居中。
+        // 小卡禁用 9-slice Hud 样式（padding 84/每边把内容区吃成负数，文字挤出卡外——
+        // 2026-08-29 截图审计"左右两边文字看不到"根因），改素纸卡 PaperCard。
+        var rect = new Rect(16f, 16f, w, h);
+        GUILayout.BeginArea(rect);
+        UiTheme.PaperCard(rect, 0.92f);
+        GUILayout.Space(6f);
+        DrawAnimatedStatusLine(line1, st, measure);
         if (line2 != null) GUILayout.Label(line2, st);
         GUILayout.EndArea();
 
         DrawKeyHints(); // 右上：系统/键位卡（占小地图位）
+    }
+
+    // ── 数值变化动画（设计系统：每个"变化"都有 0.1s 级反馈）──────────────
+    private struct ValueAnim { public int last; public float until; public bool up; }
+    private ValueAnim _goldAnim;
+    private ValueAnim _prosperityAnim;
+    private const float ValueFlashDur = 0.9f;
+
+    private void TrackValueChange(ref ValueAnim anim, int current)
+    {
+        if (anim.last == 0) { anim.last = current; return; } // 首帧建基线不闪
+        if (current != anim.last)
+        {
+            anim.up = current > anim.last;
+            anim.until = Time.unscaledTime + ValueFlashDur;
+            anim.last = current;
+        }
+    }
+
+    /// <summary>状态行渲染：大洋/繁荣近 0.9s 内变化时该词弹跳放大+涨朱红/跌淡墨闪一拍。
+    /// 富文本 size 逐帧重算（IMGUI 无独立数值动画，弹跳用 <size> 插值实现）。</summary>
+    private void DrawAnimatedStatusLine(string line1, GUIStyle st, GUIStyle measure)
+    {
+        float t = -1f; // -1=无动画
+        bool up = false;
+        float gLeft = _goldAnim.until - Time.unscaledTime;
+        float pLeft = _prosperityAnim.until - Time.unscaledTime;
+        if (gLeft > 0f) { t = 1f - gLeft / ValueFlashDur; up = _goldAnim.up; }
+        else if (pLeft > 0f) { t = 1f - pLeft / ValueFlashDur; up = _prosperityAnim.up; }
+
+        if (t < 0f)
+        {
+            GUILayout.Label(line1, st);
+            return;
+        }
+        // 弹跳包络：前 0.2s 冲到峰值 1.35x，之后回弹到 1（easeOutBack 近似）
+        float pop = t < 0.25f ? Mathf.Lerp(1f, 1.35f, t / 0.25f) : Mathf.Lerp(1.35f, 1f, (t - 0.25f) / 0.75f);
+        int sizeNow = Mathf.RoundToInt(UiTheme.SizeBody * pop);
+        // 变化词染闪色：涨=朱红、跌=淡墨（0.9s 后自然回正文墨色）
+        string flash = up ? "#9E2B25" : "#5A5042";
+        string animated = line1
+            .Replace($"大洋 {_goldAnim.last}", $"<size={sizeNow}><color={flash}>大洋 {_goldAnim.last}</color></size>")
+            .Replace($"繁荣 {_prosperityAnim.last}", $"<size={sizeNow}><color={flash}>繁荣 {_prosperityAnim.last}</color></size>");
+        GUILayout.Label(animated, st);
+    }
+
+    /// <summary>HUD 委托行：进行中=委托名+绿圈实时方位距离（审计口诀第四条：
+    /// 告诉玩家"去哪+还有多远"，消掉"绿圈找不到"迷失）；无委托=null 不占行。</summary>
+    private string BuildCommissionLine(CommissionInfo active)
+    {
+        if (active == null) return null;
+        string baseLine = $"<color=#9E2B25><b>委托：{(string.IsNullOrEmpty(active.npc) ? "" : active.npc + " · ")}{(string.IsNullOrEmpty(active.title) ? "进行中" : active.title)}</b></color>";
+        // 绿圈导航：zoneCenter 由 OnBuildPlaced 记录；玩家未放建筑前用委托发单点（NPC 位置）
+        if (_zoneGuideCenter.HasValue)
+        {
+            var player = GameObject.Find("Player");
+            if (player != null)
+            {
+                Vector3 delta = _zoneGuideCenter.Value - new Vector2(player.transform.position.x, player.transform.position.z);
+                float dist = delta.magnitude;
+                if (dist < 2.5f)
+                {
+                    return $"{baseLine}　<color=#1E7A1E>◉ 已在绿圈内</color>";
+                }
+                string dir = CompassDir(delta.x, delta.y);
+                return $"{baseLine}　<color=#1E7A1E>◉ 绿圈</color>·{dir} {dist:0} 米";
+            }
+        }
+        return $"{baseLine}　建完按 [C] 提交验收";
+    }
+
+    /// <summary>平面向量→罗盘八方位（北=-Z，与场景惯例一致）。</summary>
+    private static string CompassDir(float dx, float dz)
+    {
+        // atan2(x, -z)：北 0° 东 90°
+        float ang = Mathf.Atan2(dx, -dz) * Mathf.Rad2Deg;
+        if (ang < 0f) ang += 360f;
+        string[] dirs = { "北", "东北", "东", "东南", "南", "西南", "西", "西北" };
+        return dirs[Mathf.RoundToInt(ang / 45f) % 8];
     }
 
     /// <summary>右上角键位提示卡（均衡法则的系统位；本游戏无小地图，键位提示承担该角色）。</summary>
@@ -279,10 +424,12 @@ public class CommissionSystem : MonoBehaviour
         string txt = "[Tab] 建造　[C] 委托　[E] 对话　[X] 回出生点";
         var s = measure.CalcSize(new GUIContent(txt));
         float w = s.x + 32f;
-        float h = s.y + 20f;
+        float h = s.y + 12f;
+        // 同 DrawHud：素纸卡替代 9-slice（padding 吃空内容=文字不可见判例）
         var rect = new Rect(UiTheme.VW - w - UiTheme.RightMargin, 16f, w, h);
-        GUILayout.BeginArea(rect, UiTheme.Hud);
-        UiTheme.Wash(rect, 0.85f);
+        GUILayout.BeginArea(rect);
+        UiTheme.PaperCard(rect, 0.85f);
+        GUILayout.Space(6f);
         GUILayout.Label(txt, st);
         GUILayout.EndArea();
     }
@@ -309,19 +456,31 @@ public class CommissionSystem : MonoBehaviour
 
     private void DrawPanel()
     {
-        // v2 panel_main 9-slice border 78 + padding 96（UiTheme.Panel 自带）；420 宽 = 3×96 + 1 字高
-        // 委托大厅=弹窗型功能面板，按弹窗对称规则居中显示（2026-08-29 用户 HUD 均衡法则）
-        float w = 420f;
-        float h = Mathf.Min(500f, UiTheme.VH - 80f);
+        // v2 panel_main 9-slice border 78 + padding 96（UiTheme.Panel 自带）。
+        // 2026-08-29 截图审计：420 宽内容列仅 228px（420-192），标题/状态行全部挤爆换行、
+        // 内容溢出面板底——加宽到 600（内容列 408）+ 高度给足。
+        // 委托大厅=弹窗型功能面板，按弹窗对称规则居中显示（HUD 均衡法则）。
+        float w = 600f;
+        float h = Mathf.Min(780f, UiTheme.VH - 60f);
         var rect = new Rect((UiTheme.VW - w) / 2f, (UiTheme.VH - h) / 2f, w, h); // 屏幕居中
+        UiTheme.DrawShadow(rect);
 
         GUILayout.BeginArea(rect, UiTheme.Panel);
         UiTheme.Wash(rect);
 
-        // ── 头部行：标题 + 印章（盖章=受理隐喻；印章 ≤1/屏）──
+        // ── 头部行：标题 + 自绘关闭 ×（楷体缺 × 字形方块判例；快捷键提示不塞标题）+ 印章 ──
         GUILayout.BeginHorizontal();
-        GUILayout.Label("委托大厅  <color=#5A5042>[C 关闭]</color>", UiTheme.Title);
+        GUILayout.Label("委托大厅", UiTheme.Title, GUILayout.Height(48f));
         GUILayout.FlexibleSpace();
+        if (GUILayout.Button("", UiTheme.BtnIcon, GUILayout.Width(34f), GUILayout.Height(34f)))
+        {
+            UiPanelLayout.Close(UiPanelLayout.Panel.Commission);
+            _panelVisible = UiPanelLayout.CommissionVisible;
+        }
+        var closeRect = GUILayoutUtility.GetLastRect();
+        bool closeHover = closeRect.Contains(Event.current.mousePosition);
+        UiTheme.DrawX(closeRect, closeHover ? UiTheme.Vermilion : UiTheme.InkSoft, 2.5f);
+        GUILayout.Space(10f);
         var sealRect = GUILayoutUtility.GetRect(48f, 48f, GUILayout.Width(48f), GUILayout.Height(48f));
         UiTheme.DrawSeal(sealRect);
         GUILayout.EndHorizontal();
@@ -391,15 +550,15 @@ public class CommissionSystem : MonoBehaviour
             SecHeader("验收要求");
             GUILayout.Space(8f);
             _scroll = GUILayout.BeginScrollView(_scroll, GUIStyle.none, GUIStyle.none,
-                GUILayout.Height(Mathf.Min(h - 320f, 150f)));
+                GUILayout.Height(Mathf.Clamp(h - 560f, 60f, 140f)));
             KeyValueRow("建筑类型", $"骑楼式 {active.typeLabel} —— Tab 面板输入「建一座{active.typeLabel}」或点图纸");
             KeyValueRow("规模", $"占地 ≥ {active.minSize:0} 米　·　方块 ≥ {active.minBlocks} 个");
             KeyValueRow("落点", $"建在 <color=#1E7A1E>绿圈</color>内（{active.npc} 附近 {active.zoneRadius:0} 米）");
             GUILayout.EndScrollView();
 
-            // ── 酬劳行（结尾甜枣：金底框+大金数字）──
+            // ── 酬劳行（结尾甜枣：票据纸底框+大金数字；CardFlat——Card 88 padding 会吃空小组件）──
             GUILayout.Space(16f);
-            GUILayout.BeginHorizontal(UiTheme.Card);
+            GUILayout.BeginHorizontal(UiTheme.CardFlat);
             GUILayout.Label("酬　劳", UiTheme.Text(UiTheme.SizeBody));
             GUILayout.Space(16f);
             GUILayout.Label($"<size=20><b><color=#8A5A00>{active.rewardGold}</color></b></size>", UiTheme.Rich);
@@ -422,6 +581,7 @@ public class CommissionSystem : MonoBehaviour
             {
                 if (GUILayout.Button($"向 {npc.npcName}（{npc.roleName}）请求委托", UiTheme.Btn))
                 {
+                    AudioManager.Play("SFX_Click"); // 审计口诀第二条：按钮 0.1s 内必须有反馈
                     StartCoroutine(NewCo(npc));
                 }
             }
@@ -435,11 +595,13 @@ public class CommissionSystem : MonoBehaviour
             GUI.enabled = !_busy && _builds.Count > 0;
             if (GUILayout.Button($"提 交 验 收（已建 {_builds.Count} 栋）", UiTheme.BtnPrimary, GUILayout.Height(44f)))
             {
+                AudioManager.Play("SFX_Click"); // 主操作同享点击反馈（提交结果另有锣声）
                 StartCoroutine(SubmitCo());
             }
             GUI.enabled = !_busy;
             if (GUILayout.Button("放弃委托", UiTheme.Btn, GUILayout.Height(44f)))
             {
+                AudioManager.Play("SFX_Click");
                 StartCoroutine(AbandonCo());
             }
             GUI.enabled = true;
@@ -454,7 +616,8 @@ public class CommissionSystem : MonoBehaviour
         if (!string.IsNullOrEmpty(_resultBox))
         {
             GUILayout.Space(8f);
-            GUILayout.Box(_resultBox, new GUIStyle(UiTheme.Card) { wordWrap = true, richText = true, fontSize = UiTheme.SizeBody }, GUILayout.Height(84f));
+            // Card 88 padding 在 84 高盒里把文字吃光（同小组件禁大 padding 判例）→ CardFlat
+            GUILayout.Box(_resultBox, new GUIStyle(UiTheme.CardFlat) { wordWrap = true, richText = true, fontSize = UiTheme.SizeBody }, GUILayout.Height(84f));
         }
         if (!string.IsNullOrEmpty(_status))
         {
@@ -535,7 +698,7 @@ public class CommissionSystem : MonoBehaviour
         _resultBox = "";
         CreateZoneRing(resp.commission);
         npc.ShowBubble($"委托：{resp.commission.title}（[C] 查看详情）", 8f);
-        _status = $"<color=green>已接下「{resp.commission.title}」，在绿圈内用 Tab 面板建造，完成后回来提交验收</color>";
+        _status = $"<color=green>已接下「{resp.commission.title}」，在绿圈内用 Tab 面板建造，建完按 [C] 提交验收</color>";
     }
 
     /// <summary>
@@ -558,7 +721,7 @@ public class CommissionSystem : MonoBehaviour
         {
             var a = _state.active;
             DialogSystem.Instance?.AddSystemLine(
-                $"【{npc.npcName}】那就拜托你了——「{a.title}」：{a.desc} 建在绿圈内（{a.zoneRadius:0} 米），好了来找我（[C] 提交）。");
+                $"【{npc.npcName}】那就拜托你了——「{a.title}」：{a.desc} 建在绿圈内（{a.zoneRadius:0} 米），建完按 [C] 提交验收就行。");
         }
         else if (!string.IsNullOrEmpty(_status))
         {
@@ -792,7 +955,9 @@ public class CommissionSystem : MonoBehaviour
         }
     }
 
-    /// <summary>验收区绿圈（LineRenderer，Sprites/Default 半透明，不依赖项目资源）。</summary>
+    /// <summary>验收区绿圈（LineRenderer 圈线 + 半透明地面圆盘填充——2026-08-29 用户
+    /// "绿色区域不明显"：0.2m 细线在暖色黄昏场景不可辨且只有线没有面，没有"区域"体感。
+    /// 圈线加粗 0.35m，圆盘淡绿填充让验收范围整块可见）。</summary>
     private void CreateZoneRing(CommissionInfo c)
     {
         if (c == null) return;
@@ -800,42 +965,92 @@ public class CommissionSystem : MonoBehaviour
         DestroyZoneRing();
 
         var go = new GameObject("CommissionZoneRing");
-        var lr = go.AddComponent<LineRenderer>();
+        _zoneGuideCenter = new Vector2(c.zoneX, c.zoneZ); // 导航圆心=发单点（落位后跟随建筑）
+        _zoneRing = go.AddComponent<LineRenderer>();
+        BuildRingAndDisk(go, _zoneRing, new Vector2(c.zoneX, c.zoneZ), c.zoneRadius);
+    }
+
+    /// <summary>构建圈线（65 点 loop 宽 0.35）+ 地面圆盘（64 段三角扇淡绿 0.16 alpha）。</summary>
+    private static void BuildRingAndDisk(GameObject root, LineRenderer lr, Vector2 center, float radius)
+    {
         lr.loop = true;
         lr.useWorldSpace = true;
-        lr.widthMultiplier = 0.2f;
+        lr.widthMultiplier = 0.35f;
         lr.positionCount = 65;
         var shader = Shader.Find("Sprites/Default");
         if (shader != null)
         {
             lr.material = new Material(shader);
-            lr.startColor = new Color(0.3f, 1f, 0.5f, 0.9f);
-            lr.endColor = new Color(0.3f, 1f, 0.5f, 0.9f);
+            lr.startColor = new Color(0.25f, 1f, 0.45f, 0.95f);
+            lr.endColor = new Color(0.25f, 1f, 0.45f, 0.95f);
         }
+        WriteRingPoints(lr, center, radius);
+
+        // 地面圆盘：验收区域整块淡绿（y=0.05 垫在路网 0.035 之上防闪面）
+        var diskGo = new GameObject("ZoneDisk");
+        diskGo.transform.SetParent(root.transform, false);
+        var mf = diskGo.AddComponent<MeshFilter>();
+        mf.sharedMesh = BuildDiskMesh(radius);
+        var mr = diskGo.AddComponent<MeshRenderer>();
+        if (shader != null)
+        {
+            mr.material = new Material(shader);
+            mr.material.color = new Color(0.25f, 1f, 0.45f, 0.16f);
+        }
+        diskGo.transform.position = new Vector3(center.x, 0.05f, center.y);
+    }
+
+    private static void WriteRingPoints(LineRenderer lr, Vector2 center, float radius)
+    {
         for (int i = 0; i <= 64; i++)
         {
             float a = i / 64f * Mathf.PI * 2f;
-            lr.SetPosition(i, new Vector3(c.zoneX + Mathf.Cos(a) * c.zoneRadius, 0.25f, c.zoneZ + Mathf.Sin(a) * c.zoneRadius));
+            lr.SetPosition(i, new Vector3(center.x + Mathf.Cos(a) * radius, 0.25f, center.y + Mathf.Sin(a) * radius));
         }
-        _zoneRing = lr;
+    }
+
+    /// <summary>水平圆盘网格（64 段三角扇，绕序逆时针=法线朝上）。</summary>
+    private static Mesh BuildDiskMesh(float radius)
+    {
+        const int seg = 64;
+        var verts = new Vector3[seg + 2];
+        var tris = new int[seg * 3];
+        verts[0] = Vector3.zero; // 圆心
+        for (int i = 0; i <= seg; i++)
+        {
+            float a = i / (float)seg * Mathf.PI * 2f;
+            verts[i + 1] = new Vector3(Mathf.Cos(a) * radius, 0f, Mathf.Sin(a) * radius);
+        }
+        for (int i = 0; i < seg; i++)
+        {
+            tris[i * 3] = 0;
+            tris[i * 3 + 1] = i + 2;
+            tris[i * 3 + 2] = i + 1;
+        }
+        var mesh = new Mesh { name = "ZoneDisk" };
+        mesh.vertices = verts;
+        mesh.triangles = tris;
+        mesh.RecalculateNormals();
+        return mesh;
     }
 
     // ── 放置系统对接（BuildingPlacement 调用）──────────────────────────
     private Vector3? _lastPlacedPos;   // 最近一次建筑落点（XZ 上报服务端）
+    private Vector2? _zoneGuideCenter; // 绿圈导航圆心（HUD 方位距离用；落位跟随，验收/清委托清空）
 
     /// <summary>建筑放置确认后调用：绿圈圆心跟随建筑落位。</summary>
     public void OnBuildPlaced(Vector3 pos)
     {
         _lastPlacedPos = pos;
+        _zoneGuideCenter = new Vector2(pos.x, pos.z);
         if (_state?.active == null || _zoneRing == null) return;
 
-        // 重写 65 点圆心为落位（半径不变）
-        for (int i = 0; i <= 64; i++)
+        // 圈线 65 点 + 地面圆盘一起搬到落位（半径不变）
+        var center = new Vector2(pos.x, pos.z);
+        WriteRingPoints(_zoneRing, center, _state.active.zoneRadius);
+        if (_zoneRing.transform.childCount > 0)
         {
-            float a = i / 64f * Mathf.PI * 2f;
-            _zoneRing.SetPosition(i, new Vector3(
-                pos.x + Mathf.Cos(a) * _state.active.zoneRadius, 0.25f,
-                pos.z + Mathf.Sin(a) * _state.active.zoneRadius));
+            _zoneRing.transform.GetChild(0).position = new Vector3(pos.x, 0.05f, pos.z);
         }
     }
 
@@ -861,5 +1076,6 @@ public class CommissionSystem : MonoBehaviour
             Destroy(_zoneRing.gameObject);
             _zoneRing = null;
         }
+        _zoneGuideCenter = null; // 圈没了导航也停（验收通过/清委托）
     }
 }

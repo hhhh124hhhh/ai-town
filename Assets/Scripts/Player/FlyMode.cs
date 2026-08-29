@@ -91,7 +91,20 @@ public class FlyMode : MonoBehaviour
             _moveVelocity,
             target,
             1f - Mathf.Exp(-smooth * Time.deltaTime));
-        transform.position += _moveVelocity * Time.deltaTime;
+
+        // 位移走 CharacterController（2026-08-29 穿模定案）：飞行也保留碰撞体，
+        // 墙/建筑/地面挡得住——旧写法 transform.position += 是零碰撞裸移，
+        // 全场景可穿，穿进建筑内部=相机陷进几何体（用户观感"穿模/飞不高"）。
+        // CC.Move 不施加重力，飞行手感不变；被挡时 CC 自动沿墙滑动。
+        Vector3 delta = _moveVelocity * Time.deltaTime;
+        if (_controller != null && _controller.enabled)
+        {
+            _controller.Move(delta);
+        }
+        else
+        {
+            transform.position += delta; // 兜底：控制器缺失时退回裸移
+        }
     }
 
     private void CameraRotation()
@@ -125,7 +138,8 @@ public class FlyMode : MonoBehaviour
         if (on)
         {
             if (_fpc != null) _fpc.enabled = false;
-            if (_controller != null) _controller.enabled = false;
+            // CharacterController 保持启用（2026-08-29 穿模修复）：飞行移动走 CC.Move
+            // 保留碰撞，只有行走逻辑（FPC）需要让位。关掉 CC=全场景裸移必穿模。
             if (_cameraTarget != null)
             {
                 _pitch = _cameraTarget.transform.localEulerAngles.x;

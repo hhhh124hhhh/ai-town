@@ -182,8 +182,19 @@ public class NPCController : MonoBehaviour
         if (screen.z <= 0f) return; // 在相机背后
 
         UiTheme.BeginScale();
-        float x = screen.x / UiTheme.Scale;
-        float y = UiTheme.VH - screen.y / UiTheme.Scale; // GUI 坐标系 y 向下（缩放坐标系）
+        float sx = screen.x / UiTheme.Scale;
+        float sy = screen.y / UiTheme.Scale;
+        float x = sx;
+        float y = UiTheme.VH - sy; // GUI 坐标系 y 向下（缩放坐标系）
+
+        // 视口舒适区检查：玩家低头/仰头时 NPC 锚点会滑到屏幕顶/底缘，
+        // 名牌悬浮在半空脱离 NPC 本体，读作孤立 UI 错误（2026-08-29 用户反馈
+        // "上方一个按E说话"判例）——锚点在舒适区外直接隐藏，看见 NPC 才看见名牌。
+        if (sx < 60f || sx > UiTheme.VW - 60f || sy < 50f || sy > UiTheme.VH - 50f)
+        {
+            UiTheme.EndScale();
+            return;
+        }
 
         // 名牌（常显，黑描边保证亮背景下可读；字号走 1.33 档位 14）
         var labelStyle = new GUIStyle(GUI.skin.label)
@@ -199,22 +210,30 @@ public class NPCController : MonoBehaviour
         GUI.Label(new Rect(x - 92 + 1.5f, y - 22 + 1.5f, 180, 24), label, shadowStyle);
         GUI.Label(new Rect(x - 92, y - 22, 180, 24), label, labelStyle);
 
-        // 聊天气泡（限时；字号走 1.33 档位 12 弱提示档）
+        // 聊天气泡（限时；设计系统收编 2026-08-29：原 GUI.skin.box 默认灰盒是系统外
+        // 私造样式，压民国画面相似性破——改纸墨语言：纸白底+细墨框+墨字，同 PaperCard）
         if (!string.IsNullOrEmpty(_bubbleText) && Time.unscaledTime < _bubbleUntil)
         {
             var bubbleStyle = new GUIStyle(GUI.skin.box)
             {
-                alignment = TextAnchor.UpperCenter,
+                alignment = TextAnchor.UpperLeft,
                 fontSize = UiTheme.SizeHint,
                 wordWrap = true,
                 font = UiTheme.KaiFont,
-                normal = { textColor = new Color(1f, 1f, 0.85f) },
-                stretchWidth = false,
+                border = new RectOffset(2, 2, 2, 2),
+                padding = new RectOffset(8, 8, 6, 6),
             };
+            bubbleStyle.normal.background = Texture2D.whiteTexture;
+            bubbleStyle.normal.textColor = UiTheme.Ink;
             Vector2 size = bubbleStyle.CalcSize(new GUIContent(_bubbleText));
             float w = Mathf.Min(Mathf.Max(size.x + 16f, 120f), 340f);
             float h = Mathf.Max(size.y + 10f, 30f);
-            GUI.Box(new Rect(x - w / 2f, y - 22f - h - 6f, w, h), _bubbleText, bubbleStyle);
+            var bubbleRect = new Rect(x - w / 2f, y - 22f - h - 6f, w, h);
+            var prevColor = GUI.color;
+            GUI.color = new Color(0.97f, 0.95f, 0.91f, 0.96f); // 纸白（同 PaperCard）
+            GUI.Box(bubbleRect, _bubbleText, bubbleStyle);
+            GUI.color = prevColor;
+            UiTheme.DrawFrame(bubbleRect, new Color(UiTheme.Ink.r, UiTheme.Ink.g, UiTheme.Ink.b, 0.5f), 1f);
         }
         else if (Time.unscaledTime >= _bubbleUntil)
         {

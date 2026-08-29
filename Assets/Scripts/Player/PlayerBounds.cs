@@ -71,9 +71,15 @@ public class PlayerBounds : MonoBehaviour
         var style = UiTheme.Text(UiTheme.SizeEmph);
         var size = style.CalcSize(new GUIContent(ToastText));
         var rect = new Rect((UiTheme.VW - size.x) * 0.5f, UiTheme.VH * 0.16f, size.x + 48f, size.y + 20f);
+        // 设计系统收编（2026-08-29）：Card 的 88 padding 按大面板设计，会把这个 ~260px
+        // 小 Toast 内容区吃空（小组件禁大面板 9-slice 判例）——改 PaperCard 素纸卡
         var prev = GUI.color;
         GUI.color = new Color(1f, 1f, 1f, alpha);
-        GUI.Box(rect, ToastText, UiTheme.Card);
+        GUILayout.BeginArea(rect);
+        UiTheme.PaperCard(rect, alpha * 0.95f);
+        GUILayout.Space(8f);
+        GUILayout.Label(ToastText, style);
+        GUILayout.EndArea();
         GUI.color = prev;
         UiTheme.EndScale();
     }

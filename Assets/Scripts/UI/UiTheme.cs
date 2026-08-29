@@ -10,6 +10,22 @@ using UnityEngine;
 /// v2 缺失时回退 v1（Resources/UI/ 根，整图烘焙版），再缺回退纯色。
 /// GUIStyle 依赖 GUI.skin，必须在 OnGUI 内首次访问（各面板 OnGUI 已满足）。
 ///
+/// ══════════════════════════════════════════════════════════════════
+/// 设计系统契约（Design System，2026-08-29 建立——新 UI 一律从这里取，
+/// 答不全"每个属性取哪个 token"= 先补系统，禁止现场发明样式）：
+/// · 色板 4 角色：主色=宣纸 Paper（背景基调）/ 辅助 1=墨 Ink（文字/线条）/
+///   辅助 2=淡墨 InkSoft（次级文字）/ 强调=朱红 Vermilion（CTA/验收，每屏 ≤3 处）；
+///   扩展位：深金 Gold（奖励专用）、深绿 Green/深蓝 Blue（限定语义，系统内声明）
+/// · 按钮 3 态：BtnPrimary（主操作，每屏 ≤1）/ Btn（次/常规）/
+///   BtnLocked（禁用态，配 GUI.enabled=false）；
+///   尺寸变体：BtnGrid（网格密排）/ BtnIcon（幽灵图标）——不是新角色
+/// · 圆角：全局直角 + 细墨框（民国语言，禁大圆角 SaaS 风）
+/// · 字体 2 角色：标题=KaiTi Bold（Title/Head/SecHead）/ 正文=KaiTi Regular
+///   （Body/Hint/Field）——单字体，层级靠字重+1.33 字阶，不靠加字体
+/// · 小组件底：PaperCard（素纸卡）/ CardFlat（票据卡）——大面板 9-slice
+///   （Panel/Hud/Card）padding 按大面板设计，小组件禁用（吃空内容判例）
+/// ══════════════════════════════════════════════════════════════════
+///
 /// 排版规范（classical-aesthetics-ui skill）：
 /// - 字号只用 1.33 档位 12/14/16/20/28，层级靠字重+颜色不靠加档
 /// - 间距全 4/8 倍数；组内 < 组间
@@ -37,6 +53,7 @@ public static class UiTheme
     public const int SizeBtn = 18;     // 按钮字（16→18，字高=按钮 44px 高的 ~41%+padding≈55%）
     public const int SizeNum = 20;     // 状态数字（面板锚点）
     public const int SizeTitle = 20;   // 面板标题（与数字同级，靠粗细区分）
+    public const int SizeHead = 24;    // 面板大标题（2026-08-29 用户反馈"标题加大加粗"：20 号在主面板层级不足）
     public const int SizeDisplay = 28; // 大字（闪屏/结算）
 
     private static bool _loaded;
@@ -50,7 +67,8 @@ public static class UiTheme
     private static Font _kaiFont;
 
     private static GUIStyle _panelBox, _panelTallBox, _hudBox, _cardBox,
-        _btnStyle, _btnLocked, _btnPrimary, _title, _body, _hint, _field, _secHead, _richStyle;
+        _btnStyle, _btnLocked, _btnPrimary, _title, _body, _hint, _field, _secHead, _richStyle,
+        _head, _btnGrid, _btnIcon, _cardFlat;
 
     // ── 全局缩放（高分屏 IMGUI 字号过小的根治）─────────────────────────
     /// <summary>GUI 全局缩放：参照 1080p=1.0（2026-08-29 从 840 提到 1080——用户实测
@@ -87,7 +105,8 @@ public static class UiTheme
     public static GUIStyle Card { get { EnsureStyles(); return _cardBox; } }
     /// <summary>常规按钮（纸底墨字）：v2 页签底板，border 32，hover/active 有专属贴图。</summary>
     public static GUIStyle Btn { get { EnsureStyles(); return _btnStyle; } }
-    /// <summary>锁定态按钮（淡墨字，GUI.enabled=false 配合）：同底板换 InkSoft 字色。</summary>
+    /// <summary>禁用态按钮（设计系统按钮 3 态之一，语义=锁定/禁用统一走它）：
+    /// 淡墨字，配 GUI.enabled=false 使用；禁用即"看得见但明确不可点"。</summary>
     public static GUIStyle BtnLocked { get { EnsureStyles(); return _btnLocked; } }
     /// <summary>主操作按钮（朱红底纸字）。</summary>
     public static GUIStyle BtnPrimary { get { EnsureStyles(); return _btnPrimary; } }
@@ -101,6 +120,20 @@ public static class UiTheme
     public static GUIStyle SecHead { get { EnsureStyles(); return _secHead; } }
     /// <summary>输入框。</summary>
     public static GUIStyle Field { get { EnsureStyles(); return _field; } }
+
+    /// <summary>面板大标题（加粗 24）——主面板层级锚点。</summary>
+    public static GUIStyle Head { get { EnsureStyles(); return _head; } }
+
+    /// <summary>密集网格按钮（14 号小字，模板选择网格等高密度区）。</summary>
+    public static GUIStyle BtnGrid { get { EnsureStyles(); return _btnGrid; } }
+
+    /// <summary>幽灵图标按钮（无底板，悬停字变朱红；面板右上角关闭 × 等）。</summary>
+    public static GUIStyle BtnIcon { get { EnsureStyles(); return _btnIcon; } }
+
+    /// <summary>扁平票据卡（酬劳行/结果盒等小组件）：复用按钮纸底贴图+16 padding。
+    /// Card/Panel 的大 padding（88/96）按大面板内容区设计，小组件用它会被吃空——
+    /// 2026-08-29 实测 Hud(84)/Card(88) 小卡文字被挤出判例后新增。</summary>
+    public static GUIStyle CardFlat { get { EnsureStyles(); return _cardFlat; } }
 
     /// <summary>富文本单行样式（不换行，数字/行内混排用；字色墨、四态钉）。</summary>
     public static GUIStyle Rich { get { EnsureStyles(); return _richStyle; } }
@@ -186,6 +219,77 @@ public static class UiTheme
         GUI.color = new Color(Ink.r, Ink.g, Ink.b, alpha);
         GUI.DrawTexture(rect, Texture2D.whiteTexture, ScaleMode.StretchToFill, false);
         GUI.color = prev;
+    }
+
+    /// <summary>
+    /// 矩形描边（输入框聚焦高亮等）。thickness 建议 1.5~2.5，OnGUI 任意坐标系可调。
+    /// </summary>
+    public static void DrawFrame(Rect r, Color c, float thickness)
+    {
+        var prev = GUI.color;
+        GUI.color = c;
+        var t = Texture2D.whiteTexture;
+        GUI.DrawTexture(new Rect(r.x, r.y, r.width, thickness), t);
+        GUI.DrawTexture(new Rect(r.x, r.yMax - thickness, r.width, thickness), t);
+        GUI.DrawTexture(new Rect(r.x, r.y, thickness, r.height), t);
+        GUI.DrawTexture(new Rect(r.xMax - thickness, r.y, thickness, r.height), t);
+        GUI.color = prev;
+    }
+
+    /// <summary>
+    /// 面板投影：三层半透黑偏移矩形叠加，把浅色宣纸面板从暖色背景里"托"出来
+    /// （2026-08-29 用户反馈"面板与背景融合度高、焦点不明"）。在 BeginArea 之前用
+    /// 屏幕坐标调用（多层模拟软阴影，成本远低于动态贴图模糊）。
+    /// </summary>
+    public static void DrawShadow(Rect r)
+    {
+        var prev = GUI.color;
+        var t = Texture2D.whiteTexture;
+        GUI.color = new Color(0f, 0f, 0f, 0.20f);
+        GUI.DrawTexture(new Rect(r.x + 3f, r.y + 4f, r.width, r.height), t);
+        GUI.color = new Color(0f, 0f, 0f, 0.11f);
+        GUI.DrawTexture(new Rect(r.x + 7f, r.y + 9f, r.width, r.height), t);
+        GUI.color = new Color(0f, 0f, 0f, 0.05f);
+        GUI.DrawTexture(new Rect(r.x + 12f, r.y + 15f, r.width, r.height), t);
+        GUI.color = prev;
+    }
+
+    /// <summary>
+    /// 素纸小卡（HUD 状态卡/键位提示卡等小件专用）：纸白填充+细墨描边，在本卡的
+    /// GUILayout.BeginArea 内调用（从 (0,0) 画，同 Wash 局部坐标系契约）。
+    /// 小卡禁用 9-slice 样式（Hud padding 84/每边会把 ~300px 宽小卡的内容区吃成负数，
+    /// 文字被挤出卡外——2026-08-29 左右 HUD 文字不可见判例）。
+    /// </summary>
+    public static void PaperCard(Rect areaRect, float alpha = 0.92f)
+    {
+        var prev = GUI.color;
+        GUI.color = new Color(0.97f, 0.95f, 0.91f, alpha);
+        GUI.DrawTexture(new Rect(0f, 0f, areaRect.width, areaRect.height), Texture2D.whiteTexture);
+        DrawFrame(new Rect(0.5f, 0.5f, areaRect.width - 1f, areaRect.height - 1f),
+            new Color(Ink.r, Ink.g, Ink.b, 0.45f), 1f);
+        GUI.color = prev;
+    }
+
+    /// <summary>
+    /// 自绘关闭 ×（两根对角短棒）。楷体缺 ×/✕ 字形时文字方案渲染成实心方块
+    /// （2026-08-29 建筑面板关闭钮判例），图形方案零字体依赖。OnGUI 任意坐标系可调。
+    /// </summary>
+    public static void DrawX(Rect r, Color c, float thickness = 2f)
+    {
+        var prev = GUI.matrix;
+        var prevColor = GUI.color;
+        var pivot = new Vector2(r.x + r.width / 2f, r.y + r.height / 2f);
+        float bar = Mathf.Min(r.width, r.height) * 1.1f;
+        GUI.color = c;
+        foreach (var ang in new[] { 45f, -45f })
+        {
+            GUI.matrix = Matrix4x4.TRS(pivot, Quaternion.Euler(0f, 0f, ang), Vector3.one)
+                       * Matrix4x4.TRS(new Vector3(-pivot.x, -pivot.y, 0f), Quaternion.identity, Vector3.one);
+            GUI.DrawTexture(new Rect(pivot.x - bar / 2f, pivot.y - thickness / 2f, bar, thickness),
+                Texture2D.whiteTexture, ScaleMode.StretchToFill, false);
+        }
+        GUI.matrix = prev;
+        GUI.color = prevColor;
     }
 
     /// <summary>
@@ -288,11 +392,50 @@ public static class UiTheme
         _btnPrimary = MakeButton(
             _v2BtnRed != null ? _v2BtnRed : (_btnRed != null ? _btnRed : _solidRed),
             null, null, btnBorder, Paper, SizeBtn);
+        // 状态反馈增强（2026-08-29 用户反馈"按钮无状态暗示"）：悬停字变色——
+        // 常规按钮墨字→朱红，主按钮纸字→铜金；锁定态保持灰显不变色
+        _btnStyle.hover.textColor = Vermilion;
+        _btnPrimary.hover.textColor = Brass;
+
+        // 密集网格按钮：14 号（3 字模板名+窄 padding 装得进 ~64px 列宽）
+        _btnGrid = MakeButton(btnNormal, btnHover, btnActive, btnBorder, Ink, SizeBody);
+        _btnGrid.padding = new RectOffset(4, 4, 4, 4);
+        _btnGrid.hover.textColor = Vermilion;
+        _btnGrid.active.textColor = Vermilion;
+
+        // 幽灵按钮：无底板纯文字，悬停朱红（关闭 × 等小图标位）
+        _btnIcon = new GUIStyle(GUI.skin.button)
+        {
+            border = new RectOffset(0, 0, 0, 0),
+            padding = new RectOffset(0, 0, 0, 0),
+            fontSize = SizeEmph,
+            font = _kaiFont,
+            alignment = TextAnchor.MiddleCenter,
+        };
+        _btnIcon.normal.background = null;
+        _btnIcon.hover.background = null;
+        _btnIcon.active.background = null;
+        _btnIcon.focused.background = null;
+        _btnIcon.normal.textColor = InkSoft;
+        _btnIcon.hover.textColor = Vermilion;
+        _btnIcon.active.textColor = Vermilion;
+        _btnIcon.focused.textColor = InkSoft;
+
+        // 扁平票据卡：按钮纸底 + 中等 padding（小组件专用，见属性注释）
+        _cardFlat = MakeBox(btnNormal != null ? btnNormal : _solidPaper,
+            btnBorder, 16, Ink, SizeBody);
 
         _title = InkAllStates(new GUIStyle(GUI.skin.label)
         {
             fontStyle = FontStyle.Bold,
             fontSize = SizeTitle,
+            font = _kaiFont,
+        }, Ink);
+
+        _head = InkAllStates(new GUIStyle(GUI.skin.label)
+        {
+            fontStyle = FontStyle.Bold,
+            fontSize = SizeHead,
             font = _kaiFont,
         }, Ink);
 

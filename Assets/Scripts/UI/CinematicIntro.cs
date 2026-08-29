@@ -47,7 +47,8 @@ public class CinematicIntro : MonoBehaviour
     private const float TypeCharSeconds = 0.035f;
     private const float HoldAfterType = 1.4f;
     private const float TitleAt = 3.8f;
-    private const float OrbitAt = 10f;      // 环绕时长：135° 弧前慢后快攒冲势，生长同期收尾
+    private const float OrbitAt = 7f;       // 环绕时长（2026-08-29 用户"过长/转角太大"：10s 135°
+                                            // → 7s 80°；环绕+掠过+俯冲合计 12.1s→9.1s）
     private const float SkimSeconds = 1.2f; // 低空掠过主街（起手配锣声）
     private const float DiveSeconds = 0.9f; // 掠过锚点 → 玩家相机交棒
     private const float LampSeconds = 0.45f; // 灯亮：全黑→暖黄晕漾开（首帧钩子）
@@ -181,6 +182,9 @@ public class CinematicIntro : MonoBehaviour
         string line = null;
         if (ApiClient.Instance != null)
         {
+            // 后端可能正被 ServerBootstrap 冷启动拉起：等就绪再取开场白
+            // （等待期信笺本来就在演"镇志官正在构思…"，等待被演出吸收，不冷场）
+            yield return ServerBootstrap.WaitReady();
             yield return ApiClient.Instance.GetIntroLine(
                 l => line = l, _ => { });
             float waited = 0f;
@@ -253,11 +257,12 @@ public class CinematicIntro : MonoBehaviour
 
             if (_phase == Phase.Scene)
             {
-                // 环绕：135° 弧前慢后快（pow 缓动攒冲势），高度/半径 smoothstep 螺旋收拢
+                // 环绕：80° 弧前慢后快（pow 缓动攒冲势），高度/半径 smoothstep 螺旋收拢
+                // （2026-08-29 收紧：135°→80°，弧短冲势不散，掠过接得住）
                 float t = Mathf.Clamp01(_phaseT / orbitEnd);
                 float angleEase = Mathf.Pow(t, 1.4f);
                 float ease = t * t * (3f - 2f * t);
-                float angle = Mathf.Lerp(-60f, 75f, angleEase) * Mathf.Deg2Rad;
+                float angle = Mathf.Lerp(-40f, 40f, angleEase) * Mathf.Deg2Rad;
                 float height = Mathf.Lerp(26f, 17f, ease);
                 float radius = Mathf.Lerp(32f, 24f, ease);
                 _introCam.transform.position = new Vector3(

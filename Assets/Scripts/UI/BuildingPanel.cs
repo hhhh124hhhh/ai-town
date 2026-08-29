@@ -8,25 +8,24 @@ using UnityEngine;
 /// </summary>
 public class BuildingPanel : MonoBehaviour
 {
-    // (模板id, 中文按钮名)：id 走 API，中文上按钮（民国世界观统一）
-    private static readonly (string id, string zh)[] Templates =
+    // 分类图纸册（2026-08-29 用户反馈：27 个按钮平铺认知负荷过高）：
+    // 4 类分段页签，每类 ≤8 个=网格 2 行封顶，面板高度可控不再溢出
+    private static readonly (string tab, (string id, string zh)[] items)[] Tabs =
     {
-        ("castle", "洋楼"), ("house", "房屋"), ("tower", "高塔"), ("pagoda", "宝塔"),
-        ("qilou", "骑楼"), ("paifang", "牌坊"), ("xitai", "戏台"), ("gulou", "鼓楼"),
-        ("temple", "庙宇"), ("bridge", "桥"), ("fountain", "喷泉"), ("wall", "围墙"),
-        ("garden", "花园"), ("windmill", "风车"), ("gazebo", "凉亭"), ("lighthouse", "灯塔"),
-        ("village", "村落"), ("statue", "雕像"), ("tree", "树"), ("pyramid", "金字塔"),
-        ("sphere", "球体"), ("spiral", "螺旋"), ("mushroom", "蘑菇"), ("heart", "心形"),
-        ("skyscraper", "高楼"), ("spaceship", "飞船"), ("shanghai", "上海"),
+        ("屋舍", new[] { ("castle", "洋楼"), ("house", "房屋"), ("qilou", "骑楼"), ("village", "村落"), ("wall", "围墙") }),
+        ("公所", new[] { ("temple", "庙宇"), ("gulou", "鼓楼"), ("xitai", "戏台"), ("paifang", "牌坊"), ("bridge", "桥"), ("tower", "高塔"), ("pagoda", "宝塔") }),
+        ("园景", new[] { ("garden", "花园"), ("fountain", "喷泉"), ("windmill", "风车"), ("gazebo", "凉亭"), ("lighthouse", "灯塔"), ("statue", "雕像"), ("tree", "树") }),
+        ("奇趣", new[] { ("pyramid", "金字塔"), ("sphere", "球体"), ("spiral", "螺旋"), ("mushroom", "蘑菇"), ("heart", "心形"), ("skyscraper", "高楼"), ("spaceship", "飞船"), ("shanghai", "上海") }),
     };
 
-    private string _input = "建一座青砖老洋楼";
-    private int _templateIndex;
+    private string _input = "";
+    private int _activeTab;
     private string _status = "";
     private bool _busy;
     private float _busySince;        // _busy 置真时刻（看门狗用）
     private bool _visible = true;
-    private Vector2 _scroll;
+
+    private const string InputControlName = "bp_input";
 
     private Transform _player;
 
@@ -80,6 +79,9 @@ public class BuildingPanel : MonoBehaviour
 
     private void OnGUI()
     {
+        // 单一真源（2026-08-29 用户"面板不能乱跳"定则）：可见性每帧从协调器派生——
+        // 任何 C/E/×/生成 引发的 Request/Close/Clear 本帧立即生效，不留过期拷贝
+        _visible = UiPanelLayout.BuildingVisible;
         if (!_visible || CinematicIntro.IsCinematic)
         {
             // 面板不可见时不得持有键盘焦点,否则 WASD 一直打进隐藏输入框
@@ -88,41 +90,86 @@ public class BuildingPanel : MonoBehaviour
         }
 
         UiTheme.BeginScale();
-        // v2 panel_main 9-slice（border 78+padding 96 由 UiTheme.Panel 自带）
-        // HUD 均衡法则（2026-08-29 用户定则）：AI 建造=游戏核心功能→底部中央功能坞位
-        //（技能栏位），Tab 从底部长出；左上让给游戏状态 HUD。
-        float w = 420f;
-        float h = Mathf.Min(500f, UiTheme.VH - 40f);
+        // 2026-08-29 二次修（截图审计）：600×560——Panel padding 96×2 吃掉 192 后旧 460 宽
+        // 内容列仅 268px，模板按钮挤成窄条；600 宽内容列=408。
+        // HUD 均衡法则：AI 建造=核心功能→底部中央功能坞位，Tab 从底部长出。
+        float w = 600f;
+        float h = Mathf.Min(560f, UiTheme.VH - 40f);
         var areaRect = new Rect((UiTheme.VW - w) / 2f, UiTheme.VH - h - 16f, w, h); // 底部中央
+        // 面板投影：浅宣纸与暖背景对比不足，先托一层软阴影再画面板
+        UiTheme.DrawShadow(areaRect);
         GUILayout.BeginArea(areaRect, UiTheme.Panel);
         UiTheme.Wash(areaRect);
 
-        // ── 头部行：标题（层级：字重+颜色 > 字号）──
-        GUILayout.Label("AI 建筑生成  <color=#5A5042>(Tab 隐藏)</color>", UiTheme.Title);
-        GUILayout.Space(8f);
+        // ── 头部行：大标题 + 右上角关闭 ×（自绘图形——楷体缺 × 字形会渲染成实心方块
+        // （2026-08-29 截图判例），文字方案不可靠；操作提示不塞标题）──
+        GUILayout.BeginHorizontal();
+        GUILayout.Label("AI 建筑生成", UiTheme.Head, GUILayout.Height(34f));
+        GUILayout.FlexibleSpace();
+        if (GUILayout.Button("", UiTheme.BtnIcon, GUILayout.Width(34f), GUILayout.Height(34f)))
+        {
+            UiPanelLayout.Close(UiPanelLayout.Panel.Building);
+            _visible = UiPanelLayout.BuildingVisible;
+            UiTextFocus.Clear();
+        }
+        var closeRect = GUILayoutUtility.GetLastRect();
+        bool closeHover = closeRect.Contains(Event.current.mousePosition);
+        UiTheme.DrawX(closeRect, closeHover ? UiTheme.Vermilion : UiTheme.InkSoft, 2.5f);
+        GUILayout.EndHorizontal();
+        var ruleRect = GUILayoutUtility.GetRect(1f, 1f, GUILayout.ExpandWidth(true));
+        UiTheme.DrawRule(ruleRect, 0.4f);
+        GUILayout.Space(10f);
 
-        _input = GUILayout.TextField(_input, UiTheme.Field, GUILayout.Height(44f));
+        GUI.enabled = !_busy;
+        // ── 输入区（核心操作第一眼）：聚焦朱红描边高亮 ──
+        GUI.SetNextControlName(InputControlName);
+        _input = GUILayout.TextField(_input, UiTheme.Field, GUILayout.Height(46f));
         _inputFieldRect = GUILayoutUtility.GetLastRect();
         _inputFocused = GUIUtility.keyboardControl != 0;
+        bool fieldFocused = GUI.GetNameOfFocusedControl() == InputControlName;
+        UiTheme.DrawFrame(_inputFieldRect, fieldFocused ? UiTheme.Vermilion
+            : new Color(UiTheme.Ink.r, UiTheme.Ink.g, UiTheme.Ink.b, 0.45f), fieldFocused ? 2.5f : 1.5f);
+        // placeholder：空且未聚焦时叠淡墨提示（IMGUI 无原生 placeholder）
+        if (string.IsNullOrEmpty(_input) && !fieldFocused)
+        {
+            var phRect = new Rect(_inputFieldRect.x + 9f, _inputFieldRect.y,
+                _inputFieldRect.width - 18f, _inputFieldRect.height);
+            GUI.Label(phRect, "说出你的愿望，如：一座青砖老洋楼", UiTheme.Hint);
+        }
 
         // 点击输入框以外（场景/其他按钮）即释放键盘焦点——移动键回到角色,防误输入
         var ev = Event.current;
         if (ev != null && ev.type == EventType.MouseDown && _inputFocused && !_inputFieldRect.Contains(ev.mousePosition))
             UiTextFocus.Clear();
 
-        GUI.enabled = !_busy;
-        if (GUILayout.Button("生成（自然语言）", UiTheme.BtnPrimary, GUILayout.Height(40f)))
+        GUILayout.Space(8f);
+        // ── 主操作：最大最高的朱红按钮（视觉权重第一）──
+        if (GUILayout.Button("生 成 建 筑", UiTheme.BtnPrimary, GUILayout.Height(54f)))
         {
+            AudioManager.Play("SFX_Click");
             StartCoroutine(GenerateCo(_input, null));
         }
 
-        GUILayout.Space(16f);
-        GUILayout.Label("图纸快速生成：", UiTheme.Hint);
+        GUILayout.Space(14f);
+        // ── 分类页签行（选中=朱红底，未选=纸底墨字）──
+        GUILayout.BeginHorizontal();
+        for (int t = 0; t < Tabs.Length; t++)
+        {
+            bool on = t == _activeTab;
+            if (GUILayout.Button(Tabs[t].tab, on ? UiTheme.BtnPrimary : UiTheme.Btn, GUILayout.Height(38f),
+                GUILayout.ExpandWidth(true)))
+            {
+                _activeTab = t;
+                AudioManager.Play("SFX_Click");
+            }
+        }
+        GUILayout.EndHorizontal();
         GUILayout.Space(8f);
-        _scroll = GUILayout.BeginScrollView(_scroll, GUIStyle.none, GUIStyle.none,
-            GUILayout.Height(224f));
+
+        // ── 当前分类模板网格（4 列 ≤2 行，锁定灰显）──
+        var items = Tabs[_activeTab].items;
         int columns = 4;
-        int rows = Mathf.CeilToInt(Templates.Length / (float)columns);
+        int rows = Mathf.CeilToInt(items.Length / (float)columns);
         int selected = -1;
         for (int r = 0; r < rows; r++)
         {
@@ -130,12 +177,13 @@ public class BuildingPanel : MonoBehaviour
             for (int c = 0; c < columns; c++)
             {
                 int idx = r * columns + c;
-                if (idx >= Templates.Length) break;
-                bool unlocked = CommissionSystem.IsTemplateUnlocked(Templates[idx].id);
+                if (idx >= items.Length) break;
+                bool unlocked = CommissionSystem.IsTemplateUnlocked(items[idx].id);
                 GUI.enabled = !_busy && unlocked;
                 // 锁定模板灰显：淡墨字+🔒前缀（层级靠颜色区分，不加字号档）
-                if (GUILayout.Button(unlocked ? Templates[idx].zh : "🔒" + Templates[idx].zh,
-                    unlocked ? UiTheme.Btn : UiTheme.BtnLocked, GUILayout.Height(44f)))
+                if (GUILayout.Button(unlocked ? items[idx].zh : "🔒" + items[idx].zh,
+                    unlocked ? UiTheme.BtnGrid : UiTheme.BtnLocked, GUILayout.Height(46f),
+                    GUILayout.ExpandWidth(true)))
                 {
                     selected = idx;
                     AudioManager.Play("SFX_Click");
@@ -144,13 +192,13 @@ public class BuildingPanel : MonoBehaviour
             GUILayout.EndHorizontal();
             GUILayout.Space(4f);
         }
-        GUILayout.EndScrollView();
         GUI.enabled = !_busy;
         if (selected >= 0)
         {
-            StartCoroutine(GenerateCo(null, Templates[selected].id));
+            StartCoroutine(GenerateCo(null, items[selected].id));
         }
 
+        GUILayout.Space(6f);
         if (GUILayout.Button("清除全部建筑", UiTheme.Btn, GUILayout.Height(44f)))
         {
             AudioManager.Play("SFX_Click");
@@ -174,6 +222,12 @@ public class BuildingPanel : MonoBehaviour
 
     private IEnumerator GenerateCo(string description, string template)
     {
+        // 输入框改 placeholder 空串后（2026-08-29），空描述回车不再发空请求
+        if (template == null && string.IsNullOrWhiteSpace(description))
+        {
+            _status = "<color=#9E2B25>先输入描述，或从下方选一张图纸</color>";
+            yield break;
+        }
         ApiClient.EnsureExists(); // Play 中途脚本重载会洗掉单例，先懒补建
         if (ApiClient.Instance == null)
         {
@@ -230,6 +284,7 @@ public class BuildingPanel : MonoBehaviour
                         CommissionSystem.Instance.RegisterBuild(
                             result.name, description, template, result.blocks.Length, placed.transform);
                         CommissionSystem.Instance.OnBuildPlaced(placed.transform.position);
+                        CommissionSystem.Instance.NotifyPlacedForCommission(result.name); // 落成→引导按 C 验收
                     }
 
                     // 自动接路：落点定了才铺，从最近路面长一条引路到门口
@@ -247,6 +302,7 @@ public class BuildingPanel : MonoBehaviour
                         CommissionSystem.Instance.RegisterBuild(
                             result.name, description, template, result.blocks.Length, building.transform);
                         CommissionSystem.Instance.OnBuildPlaced(building.transform.position);
+                        CommissionSystem.Instance.NotifyPlacedForCommission(result.name); // 落成→引导按 C 验收
                     }
                     RoadBuilder.ConnectBuilding(building);
                 }
@@ -255,6 +311,8 @@ public class BuildingPanel : MonoBehaviour
                     // 幽灵已跟随准星：明确告知进入放置，别让"生成中…"挂着误导没生成
                     _status = $"<color=green>已生成「{result.name}」——准星选落点，左键放置 / 右键取消</color>";
                 }
+                // 生成成功面板自动隐藏（用户定则：面板按键驱动，Tab 重开；放置引导在场景提示条）
+                UiPanelLayout.Close(UiPanelLayout.Panel.Building);
             }
             else
             {

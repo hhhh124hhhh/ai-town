@@ -675,26 +675,32 @@ public class BuildingPlacement : MonoBehaviour
 
     private void DrawHintBar()
     {
-        float w = 560f;
-        float h = 72f;
+        // 设计系统收编（2026-08-29 用户"按键显示看不清"）：Hud 9-slice padding 84×2
+        // 把 560 宽提示条内容区吃成 392px，长按键行必然挤压溢出（小组件禁大面板判例
+        // 的漏网件）——改 PaperCard 素纸卡（纸白 0.96+细墨框），文字清晰贴系统语言
+        var st = UiTheme.Text(UiTheme.SizeBody);
+        var measure = new GUIStyle(st) { wordWrap = false };
+        string keys = "左键 放置　·　R 旋转 90°　·　滚轮 微调　·　Ctrl+滚轮 缩放　·　右键/Esc 取消　·　X 回出生点";
+        var ks = measure.CalcSize(new GUIContent(keys));
+        string state = PlacementStateText();
+        float w = Mathf.Max(ks.x, 560f) + 48f;
+        float h = 96f;
         var rect = new Rect(UiTheme.VW / 2f - w / 2f, UiTheme.VH - h - 14f, w, h);
-        GUILayout.BeginArea(rect, UiTheme.Hud);
-        UiTheme.Wash(rect, 0.9f);
-        GUILayout.Label("左键 放置　·　R 旋转 90°　·　滚轮 微调　·　Ctrl+滚轮 缩放　·　右键/Esc 取消　·　X 回出生点", UiTheme.Text(UiTheme.SizeBody));
-
-        string scaleTag = _scale != 1f ? $"　·　当前 {_scale:0.00}x" : "";
-        if (!_valid)
-        {
-            GUILayout.Label($"<color=#9E2B25>{_invalidReason}</color>{scaleTag}", UiTheme.Text(UiTheme.SizeBody));
-        }
-        else if (!string.IsNullOrEmpty(_warn))
-        {
-            GUILayout.Label($"<color=#8A5A00>{_warn}</color>{scaleTag}", UiTheme.Text(UiTheme.SizeBody));
-        }
-        else
-        {
-            GUILayout.Label($"<color=#5A5042>落点可用{scaleTag}</color>", UiTheme.Text(UiTheme.SizeBody));
-        }
+        GUILayout.BeginArea(rect);
+        UiTheme.PaperCard(rect, 0.94f);
+        GUILayout.Space(10f);
+        GUILayout.Label(keys, st);
+        GUILayout.Space(4f);
+        GUILayout.Label(state, UiTheme.Text(UiTheme.SizeEmph));
         GUILayout.EndArea();
+    }
+
+    /// <summary>放置状态行：无效原因（朱红）/ 警告（深金）/ 可用（绿字）+ 缩放标注。</summary>
+    private string PlacementStateText()
+    {
+        string scaleTag = _scale != 1f ? $"　·　当前 {_scale:0.00}x" : "";
+        if (!_valid) return $"<color=#9E2B25>{_invalidReason}</color>{scaleTag}";
+        if (!string.IsNullOrEmpty(_warn)) return $"<color=#8A5A00>{_warn}</color>{scaleTag}";
+        return $"<color=#1E7A1E>落点可用——左键确认放置{scaleTag}</color>";
     }
 }
