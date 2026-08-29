@@ -182,6 +182,7 @@ public class CommissionSystem : MonoBehaviour
                 // v2 互斥：C 切换走 UiPanelLayout（开委托自动关建筑）
                 UiPanelLayout.Request(UiPanelLayout.Panel.Commission);
                 _panelVisible = UiPanelLayout.CommissionVisible;
+                _panelOpenedAtLeastOnce = true; // 箭头引导时序（见 HasZoneGuide 注释）：知情后才重引导
             }
         }
 #endif
@@ -687,9 +688,12 @@ public class CommissionSystem : MonoBehaviour
                 {
                     ResolveZonePlacement(_state.active); // 旧布局下的 zone 坐标在新场景可能被占
                     CreateZoneRing(_state.active);
-                    // 开局存量委托显式提醒（2026-08-29 用户"绿圈在哪没提示"）：
-                    // 服务器进程活着时委托跨 Play 会话保留，静默复现=玩家不知道手上压着单
-                    ShowTopHint($"手上有未完成委托「{_state.active.title}」——跟着绿圈方位走，建完按 [C] 提交验收", 10f);
+                    // 箭头引导三层时序（用户定则）：恢复单只轻引导——提示条+HUD 方位行；
+                    // 玩家按过 C（知情）箭头才出现，60s 没按自动出（兜底防卡死）。
+                    // 注意 _commissionIssuedAt 在 Start 前为 0=兜底立即满足，这里显式重置为现在。
+                    _commissionIssuedAt = Time.unscaledTime;
+                    _panelOpenedAtLeastOnce = false;
+                    ShowTopHint("手上有未完成委托——按 [C] 看详情，跟着绿圈方位走", 10f);
                 }
             }
             else _offline = true;
@@ -731,6 +735,7 @@ public class CommissionSystem : MonoBehaviour
         _builds.Clear();
         _lastPlacedPos = null; // 新委托未放置前不带上一个委托的落点
         _resultBox = "";
+        _commissionIssuedAt = Time.unscaledTime; // 箭头 60s 兜底起点
         ResolveZonePlacement(resp.commission); // 绿圈空地解析（占用了自动挪到附近空位）
         CreateZoneRing(resp.commission);
         npc.ShowBubble($"委托：{resp.commission.title}（[C] 查看详情）", 8f);
@@ -1136,8 +1141,19 @@ public class CommissionSystem : MonoBehaviour
     private Vector3? _lastPlacedPos;   // 最近一次建筑落点（XZ 上报服务端）
     private Vector2? _zoneGuideCenter; // 绿圈导航圆心（HUD 方位/世界箭头用；落位跟随，验收/清委托清空）
 
-    /// <summary>绿圈导航圆心是否有效（CommissionArrow 世界箭头数据源）。</summary>
-    public bool HasZoneGuide => _zoneGuideCenter.HasValue;
+    // ── 箭头引导时序（2026-08-29 用户定则三层）：恢复单只轻引导（提示条+HUD 方位）；
+    // 按 C 知情后箭头出现（重引导）；60s 没点过 C 自动出（兜底防卡死）。
+    // 每单重置：接新单重新走"轻→重"时序，兜底时间从接单起算。
+    private bool _panelOpenedAtLeastOnce;
+    private float _commissionIssuedAt;
+    private const float ArrowFallbackSeconds = 60f;
+
+    /// <summary>绿圈导航圆心是否有效（CommissionArrow 世界箭头数据源）。
+    /// 含时序门控：箭头须玩家"按过 C"或 60s 兜底超时才出现。</summary>
+    public bool HasZoneGuide =>
+        _zoneGuideCenter.HasValue
+        && (_panelOpenedAtLeastOnce || Time.unscaledTime - _commissionIssuedAt >= ArrowFallbackSeconds);
+
     /// <summary>绿圈导航圆心（XZ）。HasZoneGuide 为 true 时有效。</summary>
     public Vector2 ZoneGuideCenter => _zoneGuideCenter ?? Vector2.zero;
 
