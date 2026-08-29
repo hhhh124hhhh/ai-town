@@ -19,6 +19,12 @@ public static class EffectsCatalog
     /// <summary>交付庆典 confetti（委托验收通过）。</summary>
     public const string Celebration = "celebration";
 
+    /// <summary>盖章金光迸溅（开场白落款）。</summary>
+    public const string StampBurst = "stampburst";
+
+    /// <summary>灯亮光晕（开场演出首帧，黑纱后漾开的暖金光）。</summary>
+    public const string Glow = "glow";
+
     private static readonly Dictionary<string, GameObject> _cache = new();
 
     public static GameObject Play(string key, Vector3 pos, float scale = 1f)
@@ -61,6 +67,8 @@ public static class EffectsCatalog
         {
             case Dust: return "DustDirtyPoof";
             case Celebration: return "ConfettiBlastRed";
+            case StampBurst:
+            case Glow: return "StarBurst2D";
             default: return key;
         }
     }

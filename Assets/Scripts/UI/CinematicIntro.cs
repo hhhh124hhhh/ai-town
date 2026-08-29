@@ -50,6 +50,7 @@ public class CinematicIntro : MonoBehaviour
     private const float OrbitAt = 10f;      // 环绕时长：135° 弧前慢后快攒冲势，生长同期收尾
     private const float SkimSeconds = 1.2f; // 低空掠过主街（起手配锣声）
     private const float DiveSeconds = 0.9f; // 掠过锚点 → 玩家相机交棒
+    private const float LampSeconds = 0.45f; // 灯亮：全黑→暖黄晕漾开（首帧钩子）
     private const string FallbackLine = "听说，来了一位——说句话就能让砖瓦自己长成楼的营造师。";
     private const string Title = "AI 小镇";
     private const string Subtitle = "一言既出，砖瓦成楼";
@@ -70,6 +71,8 @@ public class CinematicIntro : MonoBehaviour
     private float _introWaitSeconds;     // 开场白实际等待秒数
     private bool _lineFromAI;            // 开场白是否来自 LLM（false=离线回退稿）
     private float _typedDoneTime;        // 打字完成时刻（印章弹出动画起点）
+    private float _lampStart;            // 灯亮动画起点（黑→暖晕漾开）
+    private float _shakeUntil;           // 盖章屏震窗口结束时刻（OnGUI 域）
 
     // ── 场景引用 ──
     private Camera _introCam;
@@ -167,7 +170,14 @@ public class CinematicIntro : MonoBehaviour
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
-        // ── 相位 1：黑屏取开场白（最多等 3 秒，超时用回退句）──
+        // ── 相位 1：灯亮 → 构思（LLM 现写开场白）──
+        // 首帧即暖光晕漾开（primacy effect：第 0 秒给一个钩子，不再是死黑）；
+        // BGM 从极低淡入（声音层先立氛围，打字加速段推到正常音量）
+        _lampStart = Time.unscaledTime;
+        AudioManager.FadeInBgm();
+        // 灯亮：黑纱后面先炸开一朵暖金光晕（黑幕渐透=光从暗中漾出）
+        EffectsCatalog.Play(EffectsCatalog.Glow, StampBurstWorldPos(), 2.4f);
+
         string line = null;
         if (ApiClient.Instance != null)
         {
@@ -184,16 +194,26 @@ public class CinematicIntro : MonoBehaviour
         _introWaitSeconds = Time.unscaledTime - _introStart;
         _lineFromAI = line != null;
 
-        // ── 相位 2：打字机 ──
+        // ── 相位 2：打字机（慢→停→加速，节拍对比制造期待）──
         _phase = Phase.Type;
         _phaseT = 0f;
         while (_typedChars < _line.Length)
         {
             _typedChars = Mathf.Min(_line.Length, _typedChars + 1);
-            yield return new WaitForSecondsRealtime(TypeCharSeconds);
+            char c = _line[_typedChars - 1];
+            // 前半句庄重慢打；标点停顿换气；后半句加速攒动能
+            bool firstHalf = _typedChars <= _line.Length / 2;
+            float wait = firstHalf ? TypeCharSeconds * 1.9f
+                       : c == '，' || c == '。' || c == '、' || c == '？' || c == '！'
+                       ? TypeCharSeconds * 6f
+                       : TypeCharSeconds * 0.55f;
+            yield return new WaitForSecondsRealtime(wait);
         }
         _typedDoneTime = Time.unscaledTime;
+        _shakeUntil = _typedDoneTime + 0.25f; // 盖章屏震窗口
         AudioManager.Play("SFX_Stamp", 0.8f); // 开场白落款盖章（音效缺失时静默跳过）
+        // 盖章同时金光迸溅（峰终定律：把记忆点钉在"AI 现场书写"上）
+        EffectsCatalog.Play(EffectsCatalog.StampBurst, StampBurstWorldPos(), 1f);
         yield return new WaitForSecondsRealtime(HoldAfterType);
 
         // ── 相位 3：黑幕拉开 + 环绕 + 建筑生长 ──
@@ -396,7 +416,11 @@ public class CinematicIntro : MonoBehaviour
             }
             var tex = Texture2D.whiteTexture;
             Color prev = GUI.color;
-            GUI.color = new Color(0f, 0f, 0f, _blackAlpha);
+            // 灯亮后黑纱染暖（冷黑→暖褐纱，光晕从纱后漾出）
+            Color veil = (_phase == Phase.Black || _phase == Phase.Type)
+                ? new Color(0.17f, 0.10f, 0.05f, _blackAlpha)
+                : new Color(0f, 0f, 0f, _blackAlpha);
+            GUI.color = veil;
             GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), tex);
             GUI.color = prev;
         }
@@ -418,12 +442,14 @@ public class CinematicIntro : MonoBehaviour
             {
                 fontSize = Mathf.Min(72, Screen.width / 12),
                 alignment = TextAnchor.MiddleCenter,
+                font = UiTheme.KaiFont,
                 normal = { textColor = new Color(1f, 1f, 1f, _titleAlpha) },
             };
             var subStyle = new GUIStyle(GUI.skin.label)
             {
                 fontSize = Mathf.Min(26, Screen.width / 40),
                 alignment = TextAnchor.MiddleCenter,
+                font = UiTheme.KaiFont,
                 normal = { textColor = new Color(1f, 0.95f, 0.8f, _titleAlpha * 0.9f) },
             };
             GUI.Label(new Rect(cx - 400, Screen.height * 0.30f, 800, 90), Title, titleStyle);
@@ -438,6 +464,7 @@ public class CinematicIntro : MonoBehaviour
             {
                 fontSize = Mathf.Min(30, Screen.width / 30),
                 alignment = TextAnchor.MiddleCenter,
+                font = UiTheme.KaiFont,
                 normal = { textColor = new Color(1f, 0.95f, 0.8f, pulse) },
             };
             var startShadow = new GUIStyle(startStyle) { normal = { textColor = new Color(0f, 0f, 0f, pulse) } };
@@ -455,6 +482,7 @@ public class CinematicIntro : MonoBehaviour
             {
                 fontSize = 13,
                 alignment = TextAnchor.UpperRight,
+                font = UiTheme.KaiFont,
                 normal = { textColor = new Color(1f, 1f, 1f, 0.55f) },
             };
             GUI.Label(new Rect(Screen.width - 240, Screen.height - 36, 220, 26), "按任意键跳过", hint);
@@ -467,6 +495,7 @@ public class CinematicIntro : MonoBehaviour
             {
                 alignment = TextAnchor.MiddleCenter,
                 fontSize = 16,
+                font = UiTheme.KaiFont,
                 normal = { textColor = new Color(1f, 0.95f, 0.8f) },
             };
             GUI.Box(new Rect(Screen.width / 2f - 300, Screen.height - 90, 600, 40), _toast, toastStyle);
@@ -484,6 +513,21 @@ public class CinematicIntro : MonoBehaviour
         float vw = UiTheme.VW;
         float cy = UiTheme.VH * 0.42f;
 
+        // 浮入：灯亮后 0.27s 信笺从下方 26px 滑入到位（世界与 UI 的接缝先给光，再给纸）
+        float enter = Mathf.Clamp01((Time.unscaledTime - _lampStart - LampSeconds * 0.6f) / 0.35f);
+        if (enter <= 0f) { UiTheme.EndScale(); return; }
+        float slide = (1f - enter) * 26f;
+
+        // 盖章屏震：0.25s 确定性抖动（sin/cos 双频叠加，Layout/Repaint 两趟不漂移）
+        float shakeX = 0f, shakeY = 0f;
+        if (Time.unscaledTime < _shakeUntil)
+        {
+            float k = Mathf.Clamp01((_shakeUntil - Time.unscaledTime) / 0.25f);
+            float amp = 6f * k * k;
+            shakeX = Mathf.Sin(Time.unscaledTime * 115f) * amp;
+            shakeY = Mathf.Cos(Time.unscaledTime * 97f) * amp * 0.7f;
+        }
+
         // 内容文本：等待期=构思提示（墨点动画）；打字期=已打出的部分
         bool waiting = string.IsNullOrEmpty(_line);
         string main = waiting
@@ -494,7 +538,7 @@ public class CinematicIntro : MonoBehaviour
         var size = style.CalcSize(new GUIContent(main));
         float w = Mathf.Max(260f, size.x + 72f);
         float h = Mathf.Max(66f, size.y + 30f);
-        var rect = new Rect(vw / 2f - w / 2f, cy - h / 2f, w, h);
+        var rect = new Rect(vw / 2f - w / 2f + shakeX, cy - h / 2f + slide + shakeY, w, h);
 
         UiTheme.Wash(rect, 0.96f); // 宣纸条幅（素材缺失自动回退纯色纸）
         var prev = GUI.color;
@@ -553,5 +597,14 @@ public class CinematicIntro : MonoBehaviour
 
         GUI.matrix = saved;
         GUI.color = prev;
+    }
+
+    /// <summary>印章/灯亮特效的世界落点：演出相机视线中心前方 14m（盖在信笺后方的空气里）。</summary>
+    private Vector3 StampBurstWorldPos()
+    {
+        var cam = _introCam != null ? _introCam : Camera.main;
+        if (cam == null) return Vector3.zero;
+        var ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.55f, 0f));
+        return ray.GetPoint(14f);
     }
 }

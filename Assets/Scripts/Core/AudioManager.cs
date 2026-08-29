@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
 
 /// <summary>
@@ -73,6 +74,29 @@ public class AudioManager : MonoBehaviour
             a._cache[name] = clip;
         }
         a._sfx.PlayOneShot(clip, volume);
+    }
+
+    /// <summary>开场演出用：BGM 从极低音量淡入到正常水平（约 4s），只影响本次播放。</summary>
+    public static void FadeInBgm()
+    {
+        var a = I;
+        if (a._bgm == null || a._bgm.clip == null) return;
+        a.StartCoroutine(a.FadeInBgmCo());
+    }
+
+    private IEnumerator FadeInBgmCo()
+    {
+        const float target = 0.32f;
+        const float duration = 4f;
+        float t = 0f;
+        while (t < duration)
+        {
+            t += Time.unscaledDeltaTime;
+            if (_bgm == null) yield break;
+            _bgm.volume = Mathf.Lerp(0.04f, target, Mathf.SmoothStep(0f, 1f, t / duration));
+            yield return null;
+        }
+        if (_bgm != null) _bgm.volume = target;
     }
 
     private AudioClip Load(string name)
