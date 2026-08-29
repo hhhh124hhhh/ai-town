@@ -66,6 +66,10 @@ public class CinematicIntro : MonoBehaviour
     private bool _toastShown;
     private bool _titleFadeOut;
     private int _dustMilestone;          // 生长里程碑落尘计数（每 25% 一档，共 4 档）
+    private float _introStart;           // 开场白请求起点（算"AI 现写耗时"用）
+    private float _introWaitSeconds;     // 开场白实际等待秒数
+    private bool _lineFromAI;            // 开场白是否来自 LLM（false=离线回退稿）
+    private float _typedDoneTime;        // 打字完成时刻（印章弹出动画起点）
 
     // ── 场景引用 ──
     private Camera _introCam;
@@ -97,6 +101,7 @@ public class CinematicIntro : MonoBehaviour
     private void Start()
     {
         _ = AudioManager.I; // 懒创建并开始 BGM 循环
+        _introStart = Time.unscaledTime;
         _player = GameObject.Find("Player")?.transform;
         CollectBlocks();
         SetupCameraAndControls();
@@ -149,6 +154,12 @@ public class CinematicIntro : MonoBehaviour
         _introCam.fieldOfView = 55f;
         _introCam.nearClipPlane = 0.1f;
         _introCam.farClipPlane = 500f;
+
+        // 开场待机机位=环绕起点姿态：黑幕半透期（构思中/打字机）就能望见黄昏小镇
+        float a0 = -60f * Mathf.Deg2Rad;
+        _introCam.transform.position = new Vector3(
+            Mathf.Sin(a0) * 32f, 26f, -Mathf.Cos(a0) * 32f);
+        _introCam.transform.LookAt(new Vector3(0f, 4f, -2f));
     }
 
     private IEnumerator IntroCo()
@@ -170,6 +181,8 @@ public class CinematicIntro : MonoBehaviour
             }
         }
         _line = string.IsNullOrEmpty(line) ? FallbackLine : line;
+        _introWaitSeconds = Time.unscaledTime - _introStart;
+        _lineFromAI = line != null;
 
         // ── 相位 2：打字机 ──
         _phase = Phase.Type;
@@ -179,6 +192,8 @@ public class CinematicIntro : MonoBehaviour
             _typedChars = Mathf.Min(_line.Length, _typedChars + 1);
             yield return new WaitForSecondsRealtime(TypeCharSeconds);
         }
+        _typedDoneTime = Time.unscaledTime;
+        AudioManager.Play("SFX_Stamp", 0.8f); // 开场白落款盖章（音效缺失时静默跳过）
         yield return new WaitForSecondsRealtime(HoldAfterType);
 
         // ── 相位 3：黑幕拉开 + 环绕 + 建筑生长 ──
@@ -370,9 +385,10 @@ public class CinematicIntro : MonoBehaviour
         // 黑幕
         if (_blackAlpha > 0.01f)
         {
-            if (_phase == Phase.Type)
+            if (_phase == Phase.Black || _phase == Phase.Type)
             {
-                _blackAlpha = Mathf.MoveTowards(_blackAlpha, 1f, Time.deltaTime);
+                // 半透小镇：黑幕只压到 55%，开场白信笺叠在黄昏小镇的朦胧剪影上
+                _blackAlpha = Mathf.MoveTowards(_blackAlpha, 0.55f, Time.deltaTime * 1.2f);
             }
             else if (_phase == Phase.Scene || _phase == Phase.Skim || _phase == Phase.Dive)
             {
@@ -385,22 +401,11 @@ public class CinematicIntro : MonoBehaviour
             GUI.color = prev;
         }
 
-        // 开场白（打字机，黑幕期与拉开初期可见）
-        if ((_phase == Phase.Type || (_phase == Phase.Scene && _blackAlpha > 0.25f)) && _line.Length > 0)
+        // 开场白信笺（构思中/打字机/拉开初期可见）：宣纸条幅+淡墨字+朱红印章
+        if (_phase == Phase.Black || _phase == Phase.Type
+            || (_phase == Phase.Scene && _blackAlpha > 0.25f))
         {
-            var style = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 26,
-                alignment = TextAnchor.MiddleCenter,
-                wordWrap = true,
-                normal = { textColor = new Color(1f, 0.95f, 0.8f) },
-            };
-            string shown = _line.Substring(0, Mathf.Min(_typedChars, _line.Length));
-            Rect r = new Rect(0, Screen.height * 0.42f, Screen.width, 70f);
-            // 描边：四向偏移画黑
-            var shadow = new GUIStyle(style) { normal = { textColor = Color.black } };
-            GUI.Label(new Rect(r.x + 2, r.y + 2, r.width, r.height), shown, shadow);
-            GUI.Label(r, shown, style);
+            DrawIntroBanner();
         }
 
         // 大标题（Scene 后期 → AwaitStart 保持 → 开始后淡出）
@@ -466,5 +471,87 @@ public class CinematicIntro : MonoBehaviour
             };
             GUI.Box(new Rect(Screen.width / 2f - 300, Screen.height - 90, 600, 40), _toast, toastStyle);
         }
+    }
+
+    /// <summary>
+    /// 开场白信笺：宣纸条幅承载打字机文字（黑幕半透期叠在黄昏小镇上，文字坐素地）。
+    /// 等待期显示"镇志官正在构思…"（LLM 生成期不再是死黑屏）；
+    /// 打完盖朱红印章 + "AI 现场书写·耗时 x.x 秒"署名——把 LLM 现写这一卖点演给观众。
+    /// </summary>
+    private void DrawIntroBanner()
+    {
+        UiTheme.BeginScale();
+        float vw = UiTheme.VW;
+        float cy = UiTheme.VH * 0.42f;
+
+        // 内容文本：等待期=构思提示（墨点动画）；打字期=已打出的部分
+        bool waiting = string.IsNullOrEmpty(_line);
+        string main = waiting
+            ? "镇志官正在构思" + new string('.', Mathf.FloorToInt(Time.unscaledTime * 2.5f) % 3 + 1)
+            : _line.Substring(0, Mathf.Min(_typedChars, _line.Length));
+
+        var style = new GUIStyle(UiTheme.Text(24)) { wordWrap = false };
+        var size = style.CalcSize(new GUIContent(main));
+        float w = Mathf.Max(260f, size.x + 72f);
+        float h = Mathf.Max(66f, size.y + 30f);
+        var rect = new Rect(vw / 2f - w / 2f, cy - h / 2f, w, h);
+
+        UiTheme.Wash(rect, 0.96f); // 宣纸条幅（素材缺失自动回退纯色纸）
+        var prev = GUI.color;
+        GUI.color = new Color(0.22f, 0.19f, 0.15f, 0.5f); // 细墨边
+        var tex = Texture2D.whiteTexture;
+        GUI.DrawTexture(new Rect(rect.x, rect.y, rect.width, 2f), tex);
+        GUI.DrawTexture(new Rect(rect.x, rect.yMax - 2f, rect.width, 2f), tex);
+        GUI.DrawTexture(new Rect(rect.x, rect.y, 2f, rect.height), tex);
+        GUI.DrawTexture(new Rect(rect.xMax - 2f, rect.y, 2f, rect.height), tex);
+        GUI.color = prev;
+        GUI.Label(new Rect(rect.x + 36f, rect.y, rect.width - 72f, rect.height), main, style);
+
+        // 打完：印章弹出 + AI 现写署名
+        if (!waiting && _typedChars >= _line.Length && _typedDoneTime > 0f)
+        {
+            DrawSeal(rect);
+            string cap = _lineFromAI
+                ? $"本句由 AI 现场书写 · 耗时 {_introWaitSeconds:0.0} 秒"
+                : "本地备稿 · 服务连上后由 AI 现场书写";
+            var capStyle = new GUIStyle(UiTheme.Text(14)) { alignment = TextAnchor.MiddleCenter };
+            GUI.Label(new Rect(vw / 2f - 320f, rect.yMax + 10f, 640f, 26f), cap, capStyle);
+        }
+        UiTheme.EndScale();
+    }
+
+    /// <summary>朱红印章（AI 小镇），-8° 歪斜 + 盖下收势的弹出动画，压在信笺右下角。</summary>
+    private void DrawSeal(Rect banner)
+    {
+        float since = Time.unscaledTime - _typedDoneTime;
+        float pop = 1f + 0.45f * Mathf.Clamp01(1f - since / 0.22f);
+
+        float sealSize = 58f;
+        var pivot = new Vector2(banner.xMax - sealSize * 0.55f, banner.yMax - sealSize * 0.45f);
+        var saved = GUI.matrix;
+        GUIUtility.RotateAroundPivot(-8f, pivot);
+        var m = GUI.matrix;
+        GUI.matrix = Matrix4x4.Translate(pivot)
+                     * Matrix4x4.Scale(new Vector3(pop, pop, 1f))
+                     * Matrix4x4.Translate(-pivot)
+                     * m;
+
+        var prev = GUI.color;
+        var sealRect = new Rect(pivot.x - sealSize / 2f, pivot.y - sealSize / 2f, sealSize, sealSize);
+        GUI.color = new Color32(0x9E, 0x2B, 0x25, 0xE6); // 朱红
+        GUI.DrawTexture(sealRect, Texture2D.whiteTexture);
+
+        var sealStyle = new GUIStyle(GUI.skin.label)
+        {
+            fontSize = 17,
+            fontStyle = FontStyle.Bold,
+            alignment = TextAnchor.MiddleCenter,
+            normal = { textColor = new Color32(0xF5, 0xEF, 0xE2, 0xFF) }, // 宣纸白
+        };
+        GUI.Label(new Rect(sealRect.x, sealRect.y + 4f, sealSize, sealSize / 2f), "AI", sealStyle);
+        GUI.Label(new Rect(sealRect.x, sealRect.y + sealSize / 2f - 2f, sealSize, sealSize / 2f), "小镇", sealStyle);
+
+        GUI.matrix = saved;
+        GUI.color = prev;
     }
 }
