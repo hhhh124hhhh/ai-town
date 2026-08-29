@@ -665,6 +665,7 @@ public class CommissionSystem : MonoBehaviour
                 _offline = false;
                 if (_state.active != null)
                 {
+                    ResolveZonePlacement(_state.active); // 旧布局下的 zone 坐标在新场景可能被占
                     CreateZoneRing(_state.active);
                     // 开局存量委托显式提醒（2026-08-29 用户"绿圈在哪没提示"）：
                     // 服务器进程活着时委托跨 Play 会话保留，静默复现=玩家不知道手上压着单
@@ -710,9 +711,70 @@ public class CommissionSystem : MonoBehaviour
         _builds.Clear();
         _lastPlacedPos = null; // 新委托未放置前不带上一个委托的落点
         _resultBox = "";
+        ResolveZonePlacement(resp.commission); // 绿圈空地解析（占用了自动挪到附近空位）
         CreateZoneRing(resp.commission);
         npc.ShowBubble($"委托：{resp.commission.title}（[C] 查看详情）", 8f);
         _status = $"<color=green>已接下「{resp.commission.title}」，在绿圈内用 Tab 面板建造，建完按 [C] 提交验收</color>";
+    }
+
+    // ── 绿圈空地解析（2026-08-29 用户改布局后"绿圈被建筑占了"）────────────
+    // 原则：场景布局用户已调好不动，动的是绿圈——运行时以 NPC 为圆心环形采样，
+    // 找第一个"整块圆盘不与任何建筑脚印相交"的点。服务端 submit 判分用的是客户端
+    // 上报的落点圆心（_lastPlacedPos），绿圈本地挪位不影响判分闭环。
+
+    /// <summary>原地修正 commission 的 zone 坐标到附近空地（不占用则原样返回）。</summary>
+    private void ResolveZonePlacement(CommissionInfo c)
+    {
+        if (c == null || c.zoneRadius <= 0f) return;
+        var origin = new Vector2(c.zoneX, c.zoneZ);
+        if (!ZoneBlocked(origin, c.zoneRadius)) return; // 现位空闲
+
+        // 8 方向 × 1~3 倍半径环形采样，最近空位优先
+        for (int ring = 1; ring <= 3; ring++)
+        {
+            for (int d = 0; d < 8; d++)
+            {
+                float ang = (d * 45f + 22.5f) * Mathf.Deg2Rad; // +22.5° 避开正轴先撞建筑
+                var cand = origin + new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * (c.zoneRadius * ring);
+                // 镇界内（与 PlayerBounds/放置系统同界）
+                if (cand.x < -17f || cand.x > 21f || cand.y < -21f || cand.y > 25f) continue;
+                if (!ZoneBlocked(cand, c.zoneRadius))
+                {
+                    c.zoneX = cand.x;
+                    c.zoneZ = cand.y;
+                    return;
+                }
+            }
+        }
+        // 三圈全占：缩小半径到 60% 再试一轮（比无圈好）
+        if (c.zoneRadius > 4f)
+        {
+            c.zoneRadius *= 0.6f;
+            ResolveZonePlacement(c);
+        }
+    }
+
+    /// <summary>圆盘是否与 _Buildings 任一建筑脚印相交（脚印内收 6%，同放置系统规则）。</summary>
+    private static bool ZoneBlocked(Vector2 center, float radius)
+    {
+        var buildings = GameObject.Find("_Buildings");
+        if (buildings == null) return false;
+        float r2 = radius * radius;
+        foreach (Transform child in buildings.transform)
+        {
+            if (!child.gameObject.activeInHierarchy) continue;
+            var rs = child.GetComponentsInChildren<Renderer>();
+            if (rs.Length == 0) continue;
+            var b = rs[0].bounds;
+            foreach (var r in rs) b.Encapsulate(r.bounds);
+            float inX = b.size.x * 0.06f, inZ = b.size.z * 0.06f;
+            var min = new Vector2(b.min.x + inX, b.min.z + inZ);
+            var max = new Vector2(b.max.x - inX, b.max.z - inZ);
+            // 圆心到 AABB 最近点距离 < 半径 = 相交
+            var closest = new Vector2(Mathf.Clamp(center.x, min.x, max.x), Mathf.Clamp(center.y, min.y, max.y));
+            if ((closest - center).sqrMagnitude < r2) return true;
+        }
+        return false;
     }
 
     /// <summary>
