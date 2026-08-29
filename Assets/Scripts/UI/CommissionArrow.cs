@@ -2,6 +2,29 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
+/// 运行时特效材质工厂：统一走 URP/Particles/Unlit（本项目 Deferred 渲染器下，
+/// 内置 Sprites/Default 属未审计 shader——同族 Particles/Unlit 曾渲染洋红，
+/// 效果库当年全部转 URP 才亮，判例 2026-08-28）。URP/Particles/Unlit 支持顶点色
+/// （LineRenderer 渐变可用），_BaseColor 为主色。找不到时回退 Sprites/Default。
+/// </summary>
+public static class RuntimeFxMat
+{
+    public static Material Make(Color color)
+    {
+        var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+        if (shader != null)
+        {
+            var m = new Material(shader);
+            m.SetColor("_BaseColor", color);
+            return m;
+        }
+        var fallback = new Material(Shader.Find("Sprites/Default"));
+        fallback.color = color;
+        return fallback;
+    }
+}
+
+/// <summary>
 /// 委托绿圈引导箭头（2026-08-29 用户"绿圈有引导箭头吗"——HUD 文字方位要脑内换算，
 /// 世界内箭头才是"识别优于回忆"）：墨色纸箭头悬浮玩家前方 3m/高 2.2m，始终水平指向
 /// 绿圈圆心，随玩家移动/转向实时刷新；进圈 2.5m 内自动隐藏（到达即撤，不遮视线）。
@@ -28,12 +51,7 @@ public class CommissionArrow : MonoBehaviour
         var mf = go.AddComponent<MeshFilter>();
         mf.sharedMesh = BuildArrowMesh();
         var mr = go.AddComponent<MeshRenderer>();
-        var shader = Shader.Find("Sprites/Default");
-        if (shader != null)
-        {
-            mr.material = new Material(shader);
-            mr.material.color = new Color(0.16f, 0.15f, 0.13f, 0.85f); // 淡墨（纸墨系统）
-        }
+        mr.material = RuntimeFxMat.Make(new Color(0.16f, 0.15f, 0.13f, 0.85f)); // 淡墨（纸墨系统）
         _instance._mr = mr;
         mr.enabled = false; // 初始隐藏（渲染级，LateUpdate 保持存活）
     }

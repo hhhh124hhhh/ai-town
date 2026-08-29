@@ -1080,13 +1080,7 @@ public class CommissionSystem : MonoBehaviour
         lr.useWorldSpace = true;
         lr.widthMultiplier = 0.35f;
         lr.positionCount = 65;
-        var shader = Shader.Find("Sprites/Default");
-        if (shader != null)
-        {
-            lr.material = new Material(shader);
-            lr.startColor = new Color(0.25f, 1f, 0.45f, 0.95f);
-            lr.endColor = new Color(0.25f, 1f, 0.45f, 0.95f);
-        }
+        lr.material = RuntimeFxMat.Make(new Color(0.25f, 1f, 0.45f, 0.95f)); // URP shader（Deferred 判例）
         WriteRingPoints(lr, center, radius);
 
         // 地面圆盘：验收区域整块淡绿（y=0.05 垫在路网 0.035 之上防闪面）
@@ -1095,11 +1089,7 @@ public class CommissionSystem : MonoBehaviour
         var mf = diskGo.AddComponent<MeshFilter>();
         mf.sharedMesh = BuildDiskMesh(radius);
         var mr = diskGo.AddComponent<MeshRenderer>();
-        if (shader != null)
-        {
-            mr.material = new Material(shader);
-            mr.material.color = new Color(0.25f, 1f, 0.45f, 0.16f);
-        }
+        mr.material = RuntimeFxMat.Make(new Color(0.25f, 1f, 0.45f, 0.16f));
         diskGo.transform.position = new Vector3(center.x, 0.05f, center.y);
     }
 
