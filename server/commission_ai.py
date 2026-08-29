@@ -194,8 +194,8 @@ class CommissionManager:
         a = seq[idx % len(seq)]
 
         x, z = float(npc_pos[0]), float(npc_pos[2])
-        # 难度随完成数收紧：验收半径 18m → 最低 8m
-        radius = max(18 - 2 * self.completed, 8)
+        # 难度随完成数收紧：验收半径 25m → 最低 12m（2026-08-29 从 18m 增大，场景建筑多需要更大空间）
+        radius = max(25 - 2 * self.completed, 12)
         c = {
             "id": f"c{self._next_id:03d}",
             "npc": npc_name,
