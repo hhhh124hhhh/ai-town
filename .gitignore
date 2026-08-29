@@ -36,3 +36,4 @@ desktop.ini
 # server 运行时产物（落盘状态/日志）
 server/state.json
 server/*.log
+server/__pycache__/
