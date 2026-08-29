@@ -46,16 +46,16 @@ public class CinematicIntro : MonoBehaviour
     // ── 演出参数 ──
     private const float TypeCharSeconds = 0.035f;
     private const float HoldAfterType = 1.4f;
-    private const float BlocksPerSecond = 11f;
     private const float TitleAt = 3.8f;
-    private const float DiveAt = 7.2f;
-    private const float DiveSeconds = 2.0f;
+    private const float OrbitAt = 10f;      // 环绕时长：135° 弧前慢后快攒冲势，生长同期收尾
+    private const float SkimSeconds = 1.2f; // 低空掠过主街（起手配锣声）
+    private const float DiveSeconds = 0.9f; // 掠过锚点 → 玩家相机交棒
     private const string FallbackLine = "听说，来了一位——说句话就能让砖瓦自己长成楼的营造师。";
     private const string Title = "AI 小镇";
     private const string Subtitle = "一言既出，砖瓦成楼";
 
     // ── 演出状态（OnGUI 读取）──
-    private enum Phase { Black, Type, Scene, Dive, AwaitStart, Toast, Done }
+    private enum Phase { Black, Type, Scene, Skim, Dive, AwaitStart, Toast, Done }
     private Phase _phase = Phase.Black;
     private string _line = "";
     private int _typedChars;
@@ -73,6 +73,7 @@ public class CinematicIntro : MonoBehaviour
     private Behaviour[] _disabledBehaviours;
     private readonly List<Transform> _blocks = new();
     private Transform _player;
+    private Vector3 _skimFromPos;        // 掠过起点（环绕终点）
     private Vector3 _diveFromPos;
     private Quaternion _diveFromRot;
     private Vector3 _playerCamPos;
@@ -196,13 +197,19 @@ public class CinematicIntro : MonoBehaviour
             _playerCamRot = Quaternion.identity;
         }
 
-        float diveStart = DiveAt;
+        float orbitEnd = OrbitAt;
         float revealed = 0f;
         float lastReveal = 0f;
 
-        while (_phaseT < DiveSeconds + 0.05f)
+        while (_phaseT < orbitEnd + SkimSeconds + DiveSeconds + 0.05f)
         {
-            if (_phase == Phase.Scene && _phaseT >= diveStart)
+            if (_phase == Phase.Scene && _phaseT >= orbitEnd)
+            {
+                _phase = Phase.Skim;
+                _skimFromPos = _introCam.transform.position;
+                AudioManager.Play("SFX_Gong"); // 掠过起手一声锣
+            }
+            else if (_phase == Phase.Skim && _phaseT >= orbitEnd + SkimSeconds)
             {
                 _phase = Phase.Dive;
                 _diveFromPos = _introCam.transform.position;
@@ -211,18 +218,20 @@ public class CinematicIntro : MonoBehaviour
 
             if (_phase == Phase.Scene)
             {
-                // 缓慢环绕：角度 -50°→45°，高度 26→17，半径 32→24
-                float t = Mathf.Clamp01(_phaseT / diveStart);
+                // 环绕：135° 弧前慢后快（pow 缓动攒冲势），高度/半径 smoothstep 螺旋收拢
+                float t = Mathf.Clamp01(_phaseT / orbitEnd);
+                float angleEase = Mathf.Pow(t, 1.4f);
                 float ease = t * t * (3f - 2f * t);
-                float angle = Mathf.Lerp(-50f, 45f, ease) * Mathf.Deg2Rad;
+                float angle = Mathf.Lerp(-60f, 75f, angleEase) * Mathf.Deg2Rad;
                 float height = Mathf.Lerp(26f, 17f, ease);
                 float radius = Mathf.Lerp(32f, 24f, ease);
                 _introCam.transform.position = new Vector3(
                     Mathf.Sin(angle) * radius, height, -Mathf.Cos(angle) * radius);
                 _introCam.transform.LookAt(new Vector3(0f, 4f, -2f));
 
-                // 逐块生长（按时间比例推进 revealed）
-                revealed = Mathf.Min(_blocks.Count, _phaseT * BlocksPerSecond);
+                // 逐块生长：easeOut 时间轴（开头快结尾慢），最后一块在环绕尾声落成
+                float revealEase = 1f - (1f - t) * (1f - t);
+                revealed = _blocks.Count * revealEase;
                 if (revealed - lastReveal >= 1f)
                 {
                     int upto = Mathf.FloorToInt(revealed);
@@ -247,10 +256,22 @@ public class CinematicIntro : MonoBehaviour
                     }
                 }
             }
+            else if (_phase == Phase.Skim)
+            {
+                // 低空掠过：环绕终点 → 广场上空锚点，视线锁玩家头顶（穿镇速度感）
+                float t = Mathf.Clamp01((_phaseT - orbitEnd) / SkimSeconds);
+                float ease = t * t * (3f - 2f * t);
+                var anchor = new Vector3(2f, 7f, -7f); // 广场中心上空（无高物，掠过线过骑楼带顶空）
+                _introCam.transform.position = Vector3.Lerp(_skimFromPos, anchor, ease);
+                if (_player != null)
+                {
+                    _introCam.transform.LookAt(_player.position + Vector3.up * 1.2f);
+                }
+            }
             else
             {
-                // 俯冲：SmoothStep 到玩家相机位姿
-                float t = Mathf.Clamp01((_phaseT - diveStart) / DiveSeconds);
+                // 拉起交棒：SmoothStep 到玩家相机位姿
+                float t = Mathf.Clamp01((_phaseT - orbitEnd - SkimSeconds) / DiveSeconds);
                 float ease = t * t * (3f - 2f * t);
                 _introCam.transform.position = Vector3.Lerp(_diveFromPos, _playerCamPos, ease);
                 _introCam.transform.rotation = Quaternion.Slerp(_diveFromRot, _playerCamRot, ease);
@@ -268,9 +289,9 @@ public class CinematicIntro : MonoBehaviour
     private void Handoff()
     {
         foreach (var b in _blocks) if (b != null) b.gameObject.SetActive(true);
-        if (_blocks.Count > 0 && _phase == Phase.Scene)
+        if (_blocks.Count > 0 && _phase >= Phase.Scene && _phase <= Phase.Dive)
         {
-            // 从 Scene 相位直接跳过时相机仍在高空，瞬移到玩家视角
+            // 环绕/掠过/拉起中直接跳过时相机还在半空，瞬移到玩家视角
             if (_introCam != null)
             {
                 _introCam.transform.position = _playerCamPos;
@@ -353,7 +374,7 @@ public class CinematicIntro : MonoBehaviour
             {
                 _blackAlpha = Mathf.MoveTowards(_blackAlpha, 1f, Time.deltaTime);
             }
-            else if (_phase == Phase.Scene || _phase == Phase.Dive)
+            else if (_phase == Phase.Scene || _phase == Phase.Skim || _phase == Phase.Dive)
             {
                 _blackAlpha = Mathf.MoveTowards(_blackAlpha, 0f, Time.deltaTime * 1.2f);
             }
@@ -422,7 +443,8 @@ public class CinematicIntro : MonoBehaviour
         }
 
         // 跳过提示
-        if (_phase == Phase.Type || _phase == Phase.Scene || _phase == Phase.Dive)
+        if (_phase == Phase.Type || _phase == Phase.Scene
+            || _phase == Phase.Skim || _phase == Phase.Dive)
         {
             var hint = new GUIStyle(GUI.skin.label)
             {
