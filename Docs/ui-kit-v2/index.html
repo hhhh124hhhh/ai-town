@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>ai-town 民国 UI 组件库 v2 · 拆层产物预览</title>
+<style>
+  :root{ --ink:#2B2620; --paper:#F0E6CE; --verm:#9E2B25; --bg:#1C1813; --card:#26211A; --line:#3A3228; }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:#D8CDBA;padding:40px 24px 64px;
+    font-family:"KaiTi","STKaiti","楷体","Microsoft YaHei",serif;}
+  .wrap{max-width:1280px;margin:0 auto;}
+  header{text-align:center;margin-bottom:32px;}
+  header h1{font-size:30px;color:#EFE3C8;letter-spacing:6px;}
+  header .sub{margin-top:10px;color:#9C8F79;font-size:14.5px;letter-spacing:1px;line-height:1.8;}
+  .rl{width:520px;height:1px;margin:16px auto 0;background:linear-gradient(90deg,transparent,#7A6C55,transparent);}
+  h2.sec{font-size:20px;color:#EFE3C8;letter-spacing:4px;margin:44px 0 6px;display:flex;align-items:center;gap:12px;}
+  h2.sec::after{content:"";flex:1;height:1px;background:#4A4132;}
+  .secnote{font-size:13px;color:#8A7D67;margin-bottom:16px;line-height:1.8;}
+
+  /* ── A. 分层查看器 ── */
+  .viewer{display:flex;gap:20px;flex-wrap:wrap;}
+  .stagebox{flex:1;min-width:640px;position:relative;border:1px solid var(--line);border-radius:6px;
+    background:#141109;overflow:hidden;padding:14px;}
+  .stack{position:relative;width:100%;aspect-ratio:2848/1600;background:#141109;}
+  .stack img{position:absolute;image-rendering:auto;user-select:none;-webkit-user-drag:none;}
+  .stack img.base{position:relative;width:100%;display:block;}
+  .layerlist{width:300px;border:1px solid var(--line);border-radius:6px;background:var(--card);
+    padding:12px;font-size:13px;max-height:520px;overflow:auto;}
+  .layerlist h3{font-size:14px;letter-spacing:2px;color:#C8B998;margin-bottom:8px;font-weight:normal;}
+  .layerlist label{display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:4px;cursor:pointer;line-height:1.4;}
+  .layerlist label:hover{background:#31291F;}
+  .layerlist label.cur{background:#3A3123;outline:1px solid #6E5A38;}
+  .layerlist input{accent-color:#C9A227;}
+  .layerlist .z{color:#6E6350;font-size:11px;width:20px;flex:none;font-family:Consolas,monospace;}
+  .layerlist .nm{flex:1;}
+  .btnrow{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;}
+  .abtn{background:#31291F;border:1px solid #5A4A32;color:#D8CDBA;padding:6px 14px;border-radius:4px;
+    font-size:13px;cursor:pointer;font-family:inherit;letter-spacing:1px;}
+  .abtn:hover{background:#3E3426;}
+  .abtn.primary{border-color:#7A3A32;color:#E8B7B2;}
+
+  /* ── B. 9-slice 演示 ── */
+  .demo{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-end;margin-bottom:18px;}
+  .demo .cell{display:flex;flex-direction:column;gap:8px;align-items:center;}
+  .demo .cap{font-size:12.5px;color:#8A7D67;letter-spacing:1px;}
+  .frame-lg{border-style:solid;border-image:url("assets/full/layer_02.png") 78 fill stretch;}
+  .frame-lg.s1{width:380px;height:200px;border-width:32px;}
+  .frame-lg.s2{width:520px;height:280px;border-width:40px;}
+  .frame-lg.s3{width:700px;height:360px;border-width:48px;}
+  .frame-tall{border-style:solid;border-image:url("assets/full/layer_03.png") 140 fill stretch;}
+  .frame-tall.s1{width:230px;height:300px;border-width:34px;}
+  .frame-tall.s2{width:330px;height:430px;border-width:44px;}
+  .hud{border-style:solid;border-image:url("assets/full/layer_06.png") 55 70 fill stretch;}
+  .hud.s1{width:460px;height:56px;border-width:13px 17px;}
+  .hud.s2{width:720px;height:80px;border-width:18px 24px;}
+  .bt{border-style:solid;border-image:url("assets/full/button_normal.png") 32 fill stretch;}
+  .bt.hv{border-image:url("assets/full/button_hover.png") 32 fill stretch;}
+  .bt.ac{border-image:url("assets/full/button_active.png") 32 fill stretch;}
+  .bt.rd{border-image:url("assets/full/button_red.png") 32 fill stretch;}
+  .bt.s1{width:150px;height:54px;border-width:13px;}
+  .bt.s2{width:230px;height:74px;border-width:17px;}
+  .bt .lbl{display:flex;width:100%;height:100%;align-items:center;justify-content:center;
+    font-size:16px;color:var(--ink);letter-spacing:2px;}
+  .bt.rd .lbl{color:var(--paper);}
+  .divider-demo{border-style:solid;border-image:url("assets/full/divider_1.png") 12 60 fill round;height:18px;}
+  .divider-demo.s1{width:420px;border-width:6px 14px;}
+  .divider-demo.s2{width:640px;border-width:8px 18px;}
+
+  /* ── C. 组装成品预览（新皮肤+排版规则） ── */
+  .compose{display:flex;gap:24px;flex-wrap:wrap;justify-content:center;}
+  .panel9{border-style:solid;border-image:url("assets/full/layer_02.png") 78 fill stretch;
+    border-width:46px;width:640px;min-height:460px;padding:26px 30px;position:relative;
+    display:flex;flex-direction:column;}
+  .p-head{display:flex;justify-content:space-between;align-items:flex-start;}
+  .p-title{font-size:20px;font-weight:bold;color:var(--ink);letter-spacing:3px;}
+  .p-title .close{font-size:13px;color:#5A5042;font-weight:normal;margin-left:8px;letter-spacing:0;}
+  .p-seal{width:56px;height:56px;transform:rotate(-6deg);flex:none;}
+  .p-stats{margin-top:14px;padding:9px 14px;background:rgba(90,80,66,.10);border-left:3px solid rgba(90,80,66,.45);
+    display:flex;gap:22px;align-items:baseline;}
+  .p-stats .lv{font-size:14px;color:var(--ink);}
+  .p-stats .num{font-size:20px;font-weight:bold;color:var(--ink);}
+  .p-stats .unit{font-size:12px;color:#5A5042;}
+  .p-stats .hot{color:var(--verm);}
+  /* 目标梯度：升级进度细墨条（心理学修正项 1） */
+  .p-goal{margin-top:10px;padding:0 14px;}
+  .p-goal .gl{font-size:12px;color:#5A5042;display:flex;justify-content:space-between;letter-spacing:1px;}
+  .p-goal .gl b{color:var(--ink);font-size:12.5px;}
+  .p-goal .track{margin-top:5px;height:6px;background:rgba(43,38,32,.18);position:relative;}
+  .p-goal .fill{position:absolute;left:0;top:0;bottom:0;width:60%;background:#5A5042;}
+  .p-goal .fill::after{content:"";position:absolute;right:-1px;top:-2px;bottom:-2px;width:2px;background:var(--verm);}
+  .p-sec{margin-top:18px;}
+  .p-sec-head{font-size:15px;font-weight:bold;color:var(--ink);letter-spacing:3px;display:flex;align-items:center;gap:10px;}
+  .p-sec-head::after{content:"";flex:1;height:1px;background:rgba(43,38,32,.35);}
+  .p-sec-head .dot{width:5px;height:5px;background:var(--ink);transform:rotate(45deg);flex:none;}
+  .p-cmd{font-size:15px;font-weight:bold;color:var(--ink);margin-top:10px;}
+  .p-cmd .meta{font-size:13px;font-weight:normal;color:#5A5042;}
+  .p-desc{font-size:13.5px;color:#5A5042;margin-top:6px;line-height:1.7;}
+  .p-req{margin-top:12px;display:flex;flex-direction:column;gap:8px;}
+  .p-req .row{display:flex;font-size:13.5px;color:var(--ink);line-height:1.6;}
+  .p-req .k{color:#5A5042;flex:none;width:70px;}
+  .p-req .em-g{font-weight:bold;color:#1E7A1E;}
+  .p-reward{margin-top:14px;padding:8px 14px;background:rgba(138,90,0,.08);border:1px solid rgba(138,90,0,.25);
+    font-size:13.5px;color:var(--ink);display:flex;align-items:baseline;gap:8px;}
+  .p-reward .gold{font-size:19px;font-weight:bold;color:#8A5A00;}
+  .p-actions{margin-top:auto;padding-top:22px;display:flex;gap:14px;}
+  .p-actions .bt{width:150px;height:52px;border-width:13px;}
+  .p-actions .bt.rd{width:220px;}
+  .p-actions .lbl{display:flex;width:100%;height:100%;align-items:center;justify-content:center;
+    font-size:15px;color:var(--ink);letter-spacing:2px;font-family:inherit;}
+  .p-actions .rd .lbl{color:var(--paper);font-weight:bold;}
+  .compose-note{max-width:640px;font-size:13px;color:#8A7D67;line-height:2;}
+
+  /* ── D. 组件清单 ── */
+  table.map{width:100%;border-collapse:collapse;font-size:13px;background:var(--card);border:1px solid var(--line);}
+  table.map th{background:#31291F;padding:9px 12px;text-align:left;color:#C8B998;font-weight:normal;letter-spacing:1px;}
+  table.map td{padding:9px 12px;border-top:1px solid var(--line);color:#C9BCA4;vertical-align:top;line-height:1.7;}
+  table.map td.f{color:#E5D5AE;font-family:Consolas,monospace;font-size:12.5px;white-space:nowrap;}
+  table.map td.use{color:#A9C7A3;}
+  table.map td.unity{color:#D8B96A;font-family:Consolas,monospace;font-size:12.5px;white-space:nowrap;}
+  .thumbrow{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px;}
+  .thumbrow .t{display:flex;flex-direction:column;gap:6px;align-items:center;font-size:12px;color:#8A7D67;}
+  .thumbrow img{border:1px solid var(--line);border-radius:4px;background:#141109;}
+
+  /* ── E. 新旧对比 ── */
+  .vs{display:flex;gap:24px;flex-wrap:wrap;}
+  .vs .side{flex:1;min-width:420px;border:1px solid var(--line);border-radius:6px;background:var(--card);padding:16px;}
+  .vs h3{font-size:16px;margin-bottom:10px;letter-spacing:2px;font-weight:normal;}
+  .vs .old h3{color:#E0968E;}
+  .vs .new h3{color:#9CCB96;}
+  .vs img{width:100%;border-radius:4px;border:1px solid var(--line);display:block;background:#141109;}
+  .vs ul{margin:10px 0 0 18px;font-size:13px;line-height:2;color:#C9BCA4;}
+  footer{margin-top:44px;text-align:center;font-size:12.5px;color:#6E6350;letter-spacing:1px;line-height:2;}
+  footer b{color:#9C8F79;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>· 民 国 UI 组 件 库 v2 ·</h1>
+    <div class="sub">generate_game_ui_kit 两步流：整屏设计稿 → 16 层透明 PNG 拆层 → 组件化后处理<br>
+      每层自带透明通道 · 无烘焙内容 · 9-slice 可拉伸 · 接线参数已测定</div>
+    <div class="rl"></div>
+  </header>
+
+  <!-- ═══ A. 分层叠加查看器 ═══ -->
+  <h2 class="sec">一 · 分层叠加查看</h2>
+  <div class="secnote">下方 = 底图 + 16 个透明图层按原始包围盒位置叠回。勾选/取消任意层看它的独立内容；点「一层一层叠」从底图开始逐层盖上——这就是将来游戏里面板的组装方式。</div>
+  <div class="viewer">
+    <div class="stagebox"><div class="stack" id="stack"></div></div>
+    <div class="layerlist">
+      <h3>图层清单（z 序）</h3>
+      <div id="layerList"></div>
+      <div class="btnrow">
+        <button class="abtn primary" id="playBtn">一层一层叠 ▶</button>
+        <button class="abtn" id="allBtn">全开</button>
+        <button class="abtn" id="noneBtn">全关</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ B. 9-slice 拉伸验证 ═══ -->
+  <h2 class="sec">二 · 9-slice 拉伸验证</h2>
+  <div class="secnote">同一张框贴图在不同尺寸下渲染（CSS border-image = 浏览器版 9-slice，与 Unity Sprite Border 同原理）。角饰不变形、边线粗细恒定——这是旧贴图（整图烘焙）做不到的。</div>
+
+  <div class="demo">
+    <div class="cell"><div class="frame-lg s1"></div><div class="cap">主面板 380×200</div></div>
+    <div class="cell"><div class="frame-lg s2"></div><div class="cap">主面板 520×280</div></div>
+    <div class="cell"><div class="frame-lg s3"></div><div class="cap">主面板 700×360</div></div>
+  </div>
+  <div class="demo">
+    <div class="cell"><div class="frame-tall s1"></div><div class="cap">高面板 230×300</div></div>
+    <div class="cell"><div class="frame-tall s2"></div><div class="cap">高面板 330×430</div></div>
+    <div class="cell"><div class="hud s1"></div><div class="cap">HUD 窄条 460×56</div></div>
+    <div class="cell"><div class="hud s2"></div><div class="cap">HUD 窄条 720×80</div></div>
+  </div>
+  <div class="demo">
+    <div class="cell"><div class="bt s1"><div class="lbl">生成</div></div><div class="cap">按钮 常态</div></div>
+    <div class="cell"><div class="bt hv s1"><div class="lbl">生成</div></div><div class="cap">悬停 +8% 亮度</div></div>
+    <div class="cell"><div class="bt ac s1"><div class="lbl">生成</div></div><div class="cap">按下 −12% 亮度</div></div>
+    <div class="cell"><div class="bt rd s1"><div class="lbl">提交验收</div></div><div class="cap">朱红主按钮</div></div>
+    <div class="cell"><div class="bt s2"><div class="lbl">放弃委托</div></div><div class="cap">宽版 230×74</div></div>
+  </div>
+  <div class="demo">
+    <div class="cell"><div class="divider-demo s1"></div><div class="cap">墨线分隔 420</div></div>
+    <div class="cell"><div class="divider-demo s2"></div><div class="cap">墨线分隔 640</div></div>
+  </div>
+
+  <!-- ═══ C. 组装成品预览 ═══ -->
+  <h2 class="sec">三 · 组装成品：新皮肤 × 排版规则 × 心理学修正</h2>
+  <div class="secnote">主面板框（拆层 9-slice）+ 印章（拆层直用）+ 按钮四态（拆层衍生）+ 委托大厅内容（排版规则）+ 升级进度条（目标梯度修正）——皮肤、排版、心理三层一次修完的最终观感。</div>
+  <div class="compose">
+    <div class="panel9">
+      <div class="p-head">
+        <div class="p-title">委托大厅<span class="close">[C 关闭]</span></div>
+        <img class="p-seal" src="assets/full/seal.png" alt="印章">
+      </div>
+      <div class="p-stats">
+        <span class="lv">★3 小有名气</span>
+        <span><span class="num">12</span><span class="unit"> 繁荣</span></span>
+        <span><span class="num hot">45</span><span class="unit"> 大洋</span></span>
+        <span><span class="num">3</span><span class="unit"> 单完成</span></span>
+      </div>
+      <div class="p-goal">
+        <div class="gl"><span>距 <b>★4 驰名一方</b> 还需 8 繁荣</span><span>12 / 20</span></div>
+        <div class="track"><div class="fill"></div></div>
+      </div>
+      <div class="p-sec">
+        <div class="p-sec-head"><span class="dot"></span>当前委托</div>
+        <div class="p-cmd">骑楼新栋 <span class="meta">委托人 老王　难度 ●●</span></div>
+        <div class="p-desc">镇东的货栈生意好了，掌柜想沿街起一栋两层骑楼，底层开铺、楼上住人，柱廊要对着主街才体面。</div>
+      </div>
+      <div class="p-sec">
+        <div class="p-sec-head"><span class="dot"></span>验收要求</div>
+        <div class="p-req">
+          <div class="row"><span class="k">建筑类型</span><span>骑楼 —— Tab 面板输入「建一座骑楼」或点图纸</span></div>
+          <div class="row"><span class="k">规模</span><span>占地 ≥ 8 米　·　方块 ≥ 12 个</span></div>
+          <div class="row"><span class="k">落点</span><span>建在 <span class="em-g">绿圈</span> 内（老王附近 8 米）</span></div>
+        </div>
+      </div>
+      <div class="p-reward"><span>酬　劳</span><span class="gold">45</span><span>大洋　＋　解锁图纸「风车」</span></div>
+      <div class="p-actions">
+        <div class="bt rd"><div class="lbl">提 交 验 收</div></div>
+        <div class="bt"><div class="lbl">放弃委托</div></div>
+      </div>
+    </div>
+    <div class="compose-note">
+      ◈ 印章直接取自拆层 z11（带真透明通道，微转 −6° 落款）<br>
+      ◈ 面板框来自拆层 z2：内容区纯纸底，木框+回纹角饰完整，四边均匀可拉伸<br>
+      ◈ 按钮来自拆层 z4 页签：双勾边+纸底，程序化衍生悬停/按下/朱红三态<br>
+      ◈ 文字全部落在纸色内容区（对比度 ≥ 8:1），朱红只出现在：印章/酬劳数字/主按钮<br>
+      ◈ 对话面板可换 layer_03 高框、HUD 换 layer_06 窄条——同一套语言<br>
+      ◈ <b style="color:#A9C7A3">心理学修正已并入</b>：状态条下方新增「距★4 还需 8 繁荣」细墨进度条——目标梯度效应要求进度可视化（离目标越近动机越强），纯数字无进度感是旧方案盲区；6px 细墨轨道+朱红游标，强调色仍 ≤3 处<br>
+      ◈ <b style="color:#A9C7A3">排版修正已并入</b>：字号体系改中文 1.33 比例（12/14/16/20/28），比西文 1.4 更适合中文方块字的档位区分<br>
+      ◈ <b style="color:#A9C7A3">演出豁免已声明</b>：开场/结算闪屏属"峰值时刻"（峰终定律），允许暂时打破日常规范，收尾阶段统一换 v2 皮肤并保持退场回归 token 体系
+    </div>
+  </div>
+
+  <!-- ═══ D. 组件清单 ═══ -->
+  <h2 class="sec">四 · Unity 接线参数清单</h2>
+  <div class="secnote">进 Assets/Resources/UI/ 后每个 sprite 的 Border 值（Unity Sprite Editor / IMGUI GUIStyle.border 通用）。来源标记：〔拆〕= 拆层直用，〔衍〕= 拆层衍生处理，〔新增〕= 四维度评审后补的修正项（绿字行）。</div>
+  <table class="map">
+    <tr><th style="width:17%">文件</th><th style="width:15%">用途</th><th style="width:12%">尺寸</th><th style="width:17%">9-slice Border (L,R,B,T)</th><th style="width:39%">说明</th></tr>
+    <tr><td class="f">panel_main.png</td><td class="use">主面板（委托/建筑）</td><td>2161×939</td><td class="unity">78,78,78,78</td><td>〔拆 z2〕双细线+木色外缘+回纹角饰，内容区空白</td></tr>
+    <tr><td class="f">panel_tall.png</td><td class="use">高面板（对话/背包）</td><td>1332×1744</td><td class="unity">140,140,140,140</td><td>〔拆 z3〕藏书票风回纹角块 100~140px，切片取 140 覆盖</td></tr>
+    <tr><td class="f">hud_bar.png</td><td class="use">HUD 窄条/输入条</td><td>2711×260</td><td class="unity">70,70,55,55</td><td>〔拆 z6〕横向拉伸安全，中央净高 ~150px</td></tr>
+    <tr><td class="f">panel_small.png</td><td class="use">卡片/结果盒</td><td>2028×1104</td><td class="unity">70,70,70,70</td><td>〔拆 z1〕小面板框</td></tr>
+    <tr><td class="f">button_normal.png</td><td class="use">按钮 常态</td><td>609×226</td><td class="unity">32,32,32,32</td><td>〔衍 z4 页签2〕双勾边+纸底 #F0E7D4，圆角 ~26px，比例 2.7:1</td></tr>
+    <tr><td class="f">button_hover.png</td><td class="use">按钮 悬停</td><td>609×226</td><td class="unity">32,32,32,32</td><td>〔衍〕亮度 +8%</td></tr>
+    <tr><td class="f">button_active.png</td><td class="use">按钮 按下</td><td>609×226</td><td class="unity">32,32,32,32</td><td>〔衍〕亮度 −12%</td></tr>
+    <tr><td class="f">button_red.png</td><td class="use">主按钮（朱红）</td><td>609×226</td><td class="unity">32,32,32,32</td><td>〔衍〕亮度→朱红 LUT 映射，保留纸纹颗粒，压纸白字对比达标</td></tr>
+    <tr><td class="f">seal.png</td><td class="use">印章落款</td><td>1435×1408</td><td class="unity">—（定尺寸 icon）</td><td>〔拆 z11〕带透明通道，使用时旋转 −6°</td></tr>
+    <tr><td class="f">divider_1/2/3.png</td><td class="use">墨线分隔</td><td>~2538×26</td><td class="unity">24,24,6,6</td><td>〔衍 z5〕三条不同长度墨线，横向拉伸/平铺均可</td></tr>
+    <tr><td class="f">cloud_a/b.png</td><td class="use">云纹角饰</td><td>~407/360 高</td><td class="unity">—（定尺寸 icon）</td><td>〔衍 z12〕独立云纹，面板四角点缀用</td></tr>
+    <tr><td class="f">tabs_strip.png</td><td class="use">页签条（可选）</td><td>2862×241</td><td class="unity">24,24,24,24</td><td>〔拆 z4〕四页签原条，可做分组导航</td></tr>
+    <tr><td class="f">grid_panel.png</td><td class="use">格子底（备用）</td><td>1902×1061</td><td class="unity">60,60,60,60</td><td>〔拆 z7〕白赚：背包/图纸网格底</td></tr>
+    <tr><td class="f">bar_hp / bar_mp.png</td><td class="use">状态条组（备用）</td><td>2315×410</td><td class="unity">—</td><td>〔拆 z14/15〕白赚：红/蓝状态条底</td></tr>
+    <tr><td class="f" style="color:#A9C7A3">progress_track（新增）</td><td class="use">升级进度条（心理学）</td><td>~600×6</td><td class="unity">2,2,2,2</td><td>〔程序化〕细墨轨道 #5A5042@18% + 朱红游标 2px——目标梯度效应：进度可视化，代码 GUILayout 两行</td></tr>
+    <tr><td class="f" style="color:#A9C7A3">panel_flash（新增）</td><td class="use">结算/开场闪屏底</td><td>待裁</td><td class="unity">按需</td><td>〔收尾〕峰值时刻允许破例，但退场回到 token；结算页换 panel_main 底</td></tr>
+    <tr><td class="f" style="color:#A9C7A3">type scale（新增）</td><td class="use">字号 token 修正</td><td>—</td><td class="unity">12/14/16/20/28</td><td>〔规则〕中文 1.33 比例，替代 1.4；UiTheme.Text(size) 缓存键直接换</td></tr>
+  </table>
+  <div class="thumbrow">
+    <div class="t"><img src="assets/pv/layer_11.png" height="120"><span>印章 z11</span></div>
+    <div class="t"><img src="assets/pv/layer_12.png" height="120"><span>云纹 z12</span></div>
+    <div class="t"><img src="assets/pv/layer_05.png" height="60"><span>分隔线 z5</span></div>
+    <div class="t"><img src="assets/pv/layer_07.png" height="120"><span>格子底 z7</span></div>
+    <div class="t"><img src="assets/pv/layer_14.png" height="52"><span>状态条 z14</span></div>
+    <div class="t"><img src="assets/pv/layer_16.png" height="52"><span>技能图标 z16</span></div>
+  </div>
+
+  <!-- ═══ E. 新旧对比 ═══ -->
+  <h2 class="sec">五 · 新旧皮肤对比：为什么 v2 才是对的</h2>
+  <div class="vs">
+    <div class="side old">
+      <h3>旧 panel_bg（v1 · 整图烘焙）</h3>
+      <img src="../ui-audit/assets/panel_bg.png" alt="旧面板贴图">
+      <ul>
+        <li>头像框、名牌、按钮槽<b>画死在背景里</b>——布局锁死</li>
+        <li>祥云角饰只有上两角，上重下轻</li>
+        <li>9-slice 一拉伸：格子变椭圆、印章变形</li>
+        <li>游戏里要靠 Wash() 半透明宣纸盖掉内侧装饰才能压字</li>
+      </ul>
+    </div>
+    <div class="side new">
+      <h3>新 panel_main（v2 · 拆层组件）</h3>
+      <img src="assets/full/layer_02.png" alt="新面板贴图">
+      <ul>
+        <li>内容区<b>完全空白</b>，布局由代码（排版规则）决定</li>
+        <li>四边均匀+回纹角饰四角一致，9-slice 安全</li>
+        <li>任意尺寸拉伸角饰不变形（见第二节实测）</li>
+        <li>印章/云纹/分隔线独立成件，想放哪放哪</li>
+      </ul>
+    </div>
+  </div>
+
+  <footer>
+    产物：docs/ui-kit-v2/（本页）· 原始图层 .codely/ui_kit_v2/layers/（17 件全量）<br>
+    生成：generate_game_ui_kit 两步流（Seedream 5.0 Pro）· 后处理：System.Drawing（页签裁切/三态衍生/朱红 LUT/云纹分隔线拆分）<br>
+    规则依据：<b>classical-aesthetics-ui skill</b> · 接线（UiTheme.cs/五面板替换）待拍板后执行 · GENERATED 2026-08-29
+  </footer>
+</div>
+
+<script>
+const LAYERS = [
+  {z:1,  nm:'小面板框（卡片用）',   f:'layer_01.png', x:13.5,y:7.5,  w:18.8,h:18.1},
+  {z:2,  nm:'大面板框（主面板）',   f:'layer_02.png', x:38.0,y:4.9,  w:27.1,h:20.9},
+  {z:3,  nm:'高面板框（对话/背包）', f:'layer_03.png', x:71.3,y:4.8,  w:16.6,h:38.7},
+  {z:4,  nm:'四页签条（按钮源）',   f:'layer_04.png', x:14.0,y:28.9, w:29.5,h:4.4},
+  {z:5,  nm:'三条墨线分隔',        f:'layer_05.png', x:29.8,y:36.2, w:26.5,h:6.9},
+  {z:6,  nm:'窄长条框（HUD）',     f:'layer_06.png', x:37.1,y:44.9, w:20.9,h:3.5},
+  {z:7,  nm:'格子面板（背包底）',   f:'layer_07.png', x:9.6, y:68.0, w:18.8,h:18.7},
+  {z:8,  nm:'云纹装饰面板框',      f:'layer_08.png', x:39.5,y:51.0, w:21.1,h:13.9},
+  {z:9,  nm:'四键控制盘',          f:'layer_09.png', x:10.1,y:88.4, w:15.1,h:9.9},
+  {z:10, nm:'右侧组件组（含地图）', f:'layer_10.png', x:68.5,y:49.3, w:23.0,h:48.6},
+  {z:11, nm:'朱红印章',            f:'layer_11.png', x:13.9,y:34.9, w:6.0, h:10.5},
+  {z:12, nm:'两朵云纹',            f:'layer_12.png', x:57.8,y:30.9, w:6.4, h:11.2},
+  {z:13, nm:'两枚圆徽',            f:'layer_13.png', x:10.0,y:51.4, w:6.5, h:5.0},
+  {z:14, nm:'红状态条组',          f:'layer_14.png', x:10.1,y:57.6, w:13.3,h:4.2},
+  {z:15, nm:'蓝状态条组',          f:'layer_15.png', x:10.1,y:62.5, w:13.3,h:4.1},
+  {z:16, nm:'六枚技能图标',        f:'layer_16.png', x:36.1,y:67.3, w:27.7,h:7.1},
+];
+const stack = document.getElementById('stack');
+const list = document.getElementById('layerList');
+const imgBase = document.createElement('img');
+imgBase.src = 'assets/pv/base.jpg'; imgBase.className = 'base'; imgBase.alt = '底图';
+stack.appendChild(imgBase);
+const els = {};
+LAYERS.forEach(function(L){
+  const im = document.createElement('img');
+  im.src = 'assets/pv/' + L.f; im.alt = L.nm;
+  im.style.left = L.x + '%'; im.style.top = L.y + '%';
+  im.style.width = L.w + '%'; im.style.height = L.h + '%';
+  im.style.display = 'none';
+  stack.appendChild(im); els[L.z] = im;
+  const lab = document.createElement('label');
+  lab.innerHTML = '<span class="z">' + String(L.z).padStart(2,'0') + '</span><span class="nm">' + L.nm + '</span>';
+  const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = true;
+  cb.addEventListener('change', function(){ im.style.display = cb.checked ? '' : 'none'; lab.classList.remove('cur'); });
+  lab.prepend(cb); lab.dataset.z = L.z;
+  lab.addEventListener('mouseenter', function(){ im.style.outline = '1px dashed #C9A227'; });
+  lab.addEventListener('mouseleave', function(){ im.style.outline = ''; });
+  list.appendChild(lab);
+});
+function setAll(v){
+  list.querySelectorAll('input').forEach(function(cb, i){
+    cb.checked = v; els[LAYERS[i].z].style.display = v ? '' : 'none';
+  });
+}
+document.getElementById('allBtn').onclick = function(){ setAll(true); };
+document.getElementById('noneBtn').onclick = function(){ setAll(false); };
+document.getElementById('playBtn').onclick = function(){
+  setAll(false);
+  const cbs = list.querySelectorAll('input');
+  let i = 0;
+  const t = setInterval(function(){
+    if (i >= cbs.length) { clearInterval(t); return; }
+    cbs[i].checked = true; els[LAYERS[i].z].style.display = '';
+    list.querySelectorAll('label').forEach(function(l){ l.classList.remove('cur'); });
+    cbs[i].parentElement.classList.add('cur');
+    i++;
+  }, 450);
+};
+</script>
+</body>
+</html>

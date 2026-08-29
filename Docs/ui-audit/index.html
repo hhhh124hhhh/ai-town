@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>ai-town UI 美学对比 · 现状 vs 规则修正</title>
+<style>
+  :root{
+    --ink:#2B2620; --ink-soft:#5A5042; --paper:#F0E6CE;
+    --vermilion:#9E2B25; --brass:#8A5A00; --green:#1E7A1E; --blue:#2E5F8A;
+    --bg:#1C1813; --card:#26211A;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    background:var(--bg); color:#D8CDBA; padding:40px 24px 64px;
+    font-family:"KaiTi","STKaiti","楷体","Microsoft YaHei",serif;
+  }
+  .wrap{max-width:1280px;margin:0 auto;}
+  header{text-align:center;margin-bottom:36px;}
+  header h1{font-size:30px;color:#EFE3C8;letter-spacing:6px;font-weight:bold;}
+  header .sub{margin-top:10px;color:#9C8F79;font-size:15px;letter-spacing:2px;}
+  header .rule-line{width:520px;height:1px;margin:18px auto 0;
+    background:linear-gradient(90deg,transparent,#7A6C55,transparent);}
+
+  /* ── 对比舞台 ── */
+  .stage{display:flex;gap:28px;justify-content:center;align-items:flex-start;flex-wrap:wrap;}
+  .column{width:560px;}
+  .col-tag{text-align:center;margin-bottom:14px;}
+  .col-tag .badge{display:inline-block;padding:6px 22px;font-size:17px;letter-spacing:3px;
+    border-radius:3px;font-weight:bold;}
+  .before-tag .badge{background:#4A2A26;color:#E8B7B2;border:1px solid #6E3A34;}
+  .after-tag  .badge{background:#2C3A2B;color:#BFE0B9;border:1px solid #45603F;}
+  .col-tag .desc{margin-top:8px;font-size:13px;color:#8A7D67;letter-spacing:1px;}
+
+  /* ── 民国面板（两版共用骨架，贴图=游戏真实施点）── */
+  .panel{
+    position:relative; width:560px;
+    border-image:url("assets/panel_bg.png") 120 fill stretch;
+    border-style:solid; border-width:26px;
+    background-blend-mode:normal;
+  }
+  /* 宣纸 wash：模拟游戏里 Wash() 半透衬底 */
+  .panel .wash{position:absolute;inset:26px;background:rgba(240,230,206,.92);
+    display:flex;flex-direction:column;}
+  .panel-body{position:relative;padding:22px 26px;display:flex;flex-direction:column;min-height:520px;}
+
+  .btn{
+    display:inline-block; text-align:center;
+    border-image:url("assets/button.png") 26 fill stretch;
+    border-style:solid;border-width:10px;
+    font-family:inherit;cursor:default;
+  }
+  .btn-primary{
+    border-image:url("assets/button_red.png") 26 fill stretch;
+  }
+
+  /* ════ BEFORE 版：复刻现状代码 ════ */
+  .b-title{font-size:20px;font-weight:bold;color:var(--ink);}
+  .b-title span{font-size:20px;font-weight:normal;color:#5A5042;}
+  .b-status{font-size:13px;color:var(--ink);margin-top:2px;}
+  .b-aff{font-size:12px;color:#5A5042;margin-top:1px;}
+  .b-sec{font-size:14px;color:var(--ink);margin-top:2px;}
+  .b-sec b{font-size:14px;}
+  .b-h{font-size:13px;font-weight:bold;color:var(--ink);margin-top:4px;}
+  .b-l{font-size:13px;color:var(--ink);line-height:1.5;}
+  .b-actions{margin-top:6px;}
+  .b-actions .btn{width:100%;font-size:16px;padding:3px 0;margin-top:4px;color:var(--ink);}
+  .b-actions .btn-primary{color:var(--paper);}
+  .b-note{font-size:14px;color:#5A5042;margin-top:4px;}
+
+  /* ════ AFTER 版：规则修正 ════ */
+  .a-head{display:flex;justify-content:space-between;align-items:flex-start;}
+  .a-title{font-size:20px;font-weight:bold;color:var(--ink);letter-spacing:2px;}
+  .a-title .close{font-size:14px;color:var(--ink-soft);font-weight:normal;margin-left:8px;letter-spacing:0;}
+  .a-seal{
+    width:52px;height:52px;border:3px solid var(--vermilion);border-radius:4px;
+    color:var(--vermilion);display:flex;align-items:center;justify-content:center;
+    font-size:24px;font-weight:bold;transform:rotate(-6deg);
+    background:rgba(158,43,37,.06);line-height:1;text-align:center;
+  }
+  .a-stats{
+    margin-top:16px;padding:10px 14px;background:rgba(90,80,66,.10);
+    border-left:3px solid rgba(90,80,66,.45);
+    display:flex;gap:24px;align-items:baseline;
+  }
+  .a-stats .lv{font-size:14px;color:var(--ink);}
+  .a-stats .num{font-size:20px;font-weight:bold;color:var(--ink);}
+  .a-stats .unit{font-size:12px;color:var(--ink-soft);}
+  .a-stats .hot{color:var(--vermilion);}
+  .a-aff{font-size:12px;color:var(--ink-soft);margin-top:8px;padding-left:14px;}
+
+  .a-sec{margin-top:20px;}
+  .a-sec-head{
+    font-size:16px;font-weight:bold;color:var(--ink);letter-spacing:3px;
+    display:flex;align-items:center;gap:10px;
+  }
+  .a-sec-head::after{content:"";flex:1;height:1px;background:rgba(43,38,32,.35);}
+  .a-sec-head .dot{width:5px;height:5px;background:var(--ink);transform:rotate(45deg);flex:none;}
+  .a-cmd-title{font-size:16px;font-weight:bold;color:var(--ink);margin-top:12px;}
+  .a-cmd-title .meta{font-size:14px;font-weight:normal;color:var(--ink-soft);}
+  .a-desc{font-size:14px;color:var(--ink-soft);margin-top:8px;line-height:1.7;}
+  .a-req{margin-top:16px;display:flex;flex-direction:column;gap:10px;}
+  .a-req .row{display:flex;font-size:14px;color:var(--ink);line-height:1.6;}
+  .a-req .row .k{color:var(--ink-soft);flex:none;width:76px;}
+  .a-req .em{font-weight:bold;color:var(--vermilion);}
+  .a-req .em-g{font-weight:bold;color:var(--green);}
+  .a-reward{
+    margin-top:16px;padding:10px 14px;background:rgba(138,90,0,.08);
+    border:1px solid rgba(138,90,0,.25);
+    font-size:14px;color:var(--ink);display:flex;align-items:baseline;gap:8px;
+  }
+  .a-reward .gold{font-size:20px;font-weight:bold;color:var(--brass);}
+  .a-actions{margin-top:auto;padding-top:24px;display:flex;gap:16px;}
+  .a-actions .btn{flex:1;font-size:16px;padding:8px 0;color:var(--ink);}
+  .a-actions .btn-primary{flex:1.6;color:var(--paper);font-weight:bold;letter-spacing:2px;}
+
+  /* ── 标注序号圆点 ── */
+  .mark{
+    position:absolute;width:22px;height:22px;border-radius:50%;
+    background:#3B3128;border:2px solid #C9A227;color:#F3E7CB;
+    font-size:13px;font-family:"Microsoft YaHei",sans-serif;
+    display:flex;align-items:center;justify-content:center;z-index:5;
+    box-shadow:0 2px 6px rgba(0,0,0,.5);cursor:help;
+  }
+  .panel .mark{background:rgba(59,49,40,.92);}
+  .after-panel .mark{border-color:#7FB37A;}
+
+  /* ── 图例 ── */
+  .legend{margin-top:22px;border:1px solid #3A3228;background:var(--card);
+    border-radius:6px;padding:16px 20px;font-size:13.5px;line-height:2.0;}
+  .legend h3{font-size:15px;letter-spacing:2px;margin-bottom:6px;}
+  .legend .bad h3{color:#E0968E;}
+  .legend .good h3{color:#9CCB96;}
+  .legend .no{display:inline-block;width:20px;height:20px;border-radius:50%;
+    border:1.5px solid #C9A227;color:#C9A227;text-align:center;line-height:18px;
+    font-size:12px;margin-right:8px;font-family:"Microsoft YaHei",sans-serif;}
+  .legend .good .no{border-color:#7FB37A;color:#9CCB96;}
+  .legend code{background:#332B22;color:#D8B96A;padding:1px 6px;border-radius:3px;
+    font-size:12.5px;font-family:Consolas,monospace;}
+
+  /* ── 规则映射表 ── */
+  table.map{width:100%;margin-top:36px;border-collapse:collapse;font-size:13.5px;
+    background:var(--card);border:1px solid #3A3228;}
+  table.map caption{caption-side:top;text-align:left;font-size:17px;color:#EFE3C8;
+    letter-spacing:3px;padding-bottom:12px;}
+  table.map th{background:#31291F;padding:10px 14px;text-align:left;
+    color:#C8B998;font-weight:normal;letter-spacing:1px;}
+  table.map td{padding:10px 14px;border-top:1px solid #3A3228;color:#C9BCA4;vertical-align:top;line-height:1.7;}
+  table.map td.sym{color:#E0968E;white-space:nowrap;}
+  table.map td.fix{color:#A9C7A3;}
+  table.map tr:last-child td{border-bottom:1px solid #3A3228;}
+
+  /* ── 60-30-10 色彩比例条 ── */
+  .palette{margin-top:36px;}
+  .palette h2{font-size:17px;color:#EFE3C8;letter-spacing:3px;margin-bottom:12px;}
+  .bar{display:flex;height:64px;border-radius:4px;overflow:hidden;border:1px solid #3A3228;}
+  .bar div{display:flex;align-items:center;justify-content:center;
+    font-size:12px;letter-spacing:1px;font-family:"Microsoft YaHei",sans-serif;}
+  .bar .c1{background:#EFE3C8;color:#5A5042;}
+  .bar .c2{background:#5A5042;color:#EFE3C8;}
+  .bar .c3{background:#9E2B25;color:#F0E6CE;}
+  .bar-note{margin-top:8px;font-size:12.5px;color:#8A7D67;line-height:1.8;}
+  .bar-wrap{margin-bottom:18px;}
+  .bar-wrap .cap{font-size:13.5px;margin-bottom:6px;color:#B7A88D;letter-spacing:1px;}
+  .bar-bad .c3a{background:#9E2B25;color:#F0E6CE;}
+  .bar-bad .c3b{background:#1E7A1E;color:#F0E6CE;}
+  .bar-bad .c3c{background:#8A5A00;color:#F0E6CE;}
+  .bar-bad .c3d{background:#2E5F8A;color:#F0E6CE;}
+
+  footer{margin-top:44px;text-align:center;font-size:12.5px;color:#6E6350;letter-spacing:1px;line-height:2;}
+  footer b{color:#9C8F79;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>· 委 托 大 厅 · 美 学 对 比 ·</h1>
+    <div class="sub">同一块面板 · 同一套游戏贴图（panel_bg / button 均为项目实拍资产）· 左=现状代码复刻 · 右=设计规则修正</div>
+    <div class="rule-line"></div>
+  </header>
+
+  <div class="stage">
+
+    <!-- ════════ BEFORE ════════ -->
+    <div class="column before-tag">
+      <div class="col-tag">
+        <span class="badge">现状 · BEFORE</span>
+        <div class="desc">复刻 CommissionSystem.cs 现有 OnGUI 输出（字号 12/13/14/16/20 混排、Space 2/4/6、inline 彩色全开）</div>
+      </div>
+
+      <div class="panel" id="beforePanel">
+        <div class="wash"></div>
+        <div class="panel-body">
+
+          <div class="b-title">委托大厅 <span>[C 关闭]</span></div>
+          <div class="b-status">★3 小有名气　繁荣 12　大洋 45　完成 3 单</div>
+          <div class="b-aff">老王·茶馆掌柜 好感·熟客　|　铁山·巡捕 好感·点头之交</div>
+
+          <div class="b-sec"><b>「骑楼新栋」</b>　委托人：老王　难度 ●●</div>
+          <div class="b-sec" style="font-weight:normal">镇东的货栈生意好了，掌柜想沿街起一栋两层骑楼，底层开铺、楼上住人，柱廊要对着主街才体面。</div>
+
+          <div class="b-h">验收要求</div>
+          <div class="b-l">· 建筑类型：<font color="#9E2B25">骑楼</font>（Tab 面板输入「建一座骑楼」或点图纸）</div>
+          <div class="b-l">· 占地 ≥ 8 米　· 方块 ≥ 12 个</div>
+          <div class="b-l">· 建在 <font color="#1E7A1E">绿圈</font>内（老王 附近 8 米）</div>
+          <div class="b-l">酬劳：45 大洋 + 解锁图纸 <font color="#8A5A00">风车</font></div>
+
+          <div class="b-actions">
+            <span class="btn-primary btn">提交验收（接单后已建 1 栋）</span>
+            <span class="btn">放弃委托</span>
+          </div>
+
+          <div class="b-note">结果：通过（S）——「柱廊齐整，气派得很！」</div>
+
+          <span class="mark" style="top:14px;left:-34px" title="">1</span>
+          <span class="mark" style="top:52px;left:-34px">2</span>
+          <span class="mark" style="top:112px;left:-34px">3</span>
+          <span class="mark" style="top:168px;left:-34px">4</span>
+          <span class="mark" style="top:236px;left:-34px">5</span>
+          <span class="mark" style="top:300px;left:-34px">6</span>
+        </div>
+      </div>
+
+      <div class="legend bad">
+        <h3>◈ 诊断标注（为什么"不舒服"）</h3>
+        <div><span class="no">1</span>标题行与状态行零间距差，<code>Space(4)</code> 奇数值——间距无系统</div>
+        <div><span class="no">2</span>字号 12/13/14/16/20 五档随机混排——视觉噪音，"说不出哪里不对"的来源</div>
+        <div><span class="no">3</span>状态数字与正文同权重——层级平铺，没有第一焦点</div>
+        <div><span class="no">4</span>朱红/深绿/深金三色 inline 撒满 6 处——强调色无节制，等于没有强调</div>
+        <div><span class="no">5</span>信息块之间无分组线无呼吸区——组内外间距颠倒（亲密性失败）</div>
+        <div><span class="no">6</span>酬劳、按钮、结果挤成一团——满密无留白（horror vacui 廉价感）</div>
+      </div>
+    </div>
+
+    <!-- ════════ AFTER ════════ -->
+    <div class="column after-tag">
+      <div class="col-tag">
+        <span class="badge">规则修正 · AFTER</span>
+        <div class="desc">字号三档 1.4 比例 · 间距全 8 的倍数 · 细墨线分组 · 朱红限 3 处 · 留白 ≥20% · 印章落款</div>
+      </div>
+
+      <div class="panel after-panel">
+        <div class="wash"></div>
+        <div class="panel-body">
+
+          <div class="a-head">
+            <div class="a-title">委托大厅<span class="close">[C 关闭]</span></div>
+            <div class="a-seal">受<br>理</div>
+          </div>
+
+          <div class="a-stats">
+            <span class="lv">★3 小有名气</span>
+            <span><span class="num">12</span><span class="unit"> 繁荣</span></span>
+            <span><span class="num hot">45</span><span class="unit"> 大洋</span></span>
+            <span><span class="num">3</span><span class="unit"> 单完成</span></span>
+          </div>
+          <div class="a-aff">老王·茶馆掌柜（熟客）　·　铁山·巡捕（点头之交）</div>
+
+          <div class="a-sec">
+            <div class="a-sec-head"><span class="dot"></span>当前委托</div>
+            <div class="a-cmd-title">骑楼新栋 <span class="meta">委托人 老王　难度 ●●</span></div>
+            <div class="a-desc">镇东的货栈生意好了，掌柜想沿街起一栋两层骑楼，底层开铺、楼上住人，柱廊要对着主街才体面。</div>
+          </div>
+
+          <div class="a-sec">
+            <div class="a-sec-head"><span class="dot"></span>验收要求</div>
+            <div class="a-req">
+              <div class="row"><span class="k">建筑类型</span><span>骑楼 —— Tab 面板输入「建一座骑楼」或点图纸</span></div>
+              <div class="row"><span class="k">规模</span><span>占地 ≥ 8 米　·　方块 ≥ 12 个</span></div>
+              <div class="row"><span class="k">落点</span><span>建在 <span class="em-g">绿圈</span> 内（老王附近 8 米）</span></div>
+            </div>
+          </div>
+
+          <div class="a-reward">
+            <span>酬　劳</span><span class="gold">45</span><span>大洋　＋　解锁图纸「风车」</span>
+          </div>
+
+          <div class="a-actions">
+            <span class="btn-primary btn">提 交 验 收</span>
+            <span class="btn">放弃委托</span>
+          </div>
+
+          <span class="mark" style="top:18px;left:-34px">1</span>
+          <span class="mark" style="top:96px;left:-34px">2</span>
+          <span class="mark" style="top:214px;left:-34px">3</span>
+          <span class="mark" style="top:282px;left:-34px">4</span>
+          <span class="mark" style="top:378px;left:-34px">5</span>
+          <span class="mark" style="top:440px;left:-34px">6</span>
+        </div>
+      </div>
+
+      <div class="legend good">
+        <h3>◈ 修正标注（规则出处）</h3>
+        <div><span class="no">1</span>字号只三档 <code>14/16/20</code>（≈1.4 比例）——层级靠字重+颜色，不堆字号</div>
+        <div><span class="no">2</span>状态数字 20px 加粗成第一焦点；"45 大洋"朱红——一屏一个视觉锚点</div>
+        <div><span class="no">3</span>朱红全屏仅 2 处（酬劳数字＋主按钮），绿色限"绿圈"一词——60-30-10 的 10%</div>
+        <div><span class="no">4</span>细墨线 + 菱形点分组（报纸式"当前委托/验收要求"）——共同区域原则</div>
+        <div><span class="no">5</span>区块间距 16/20/24（8 的倍数），组内 8/10——组内 &lt; 组间（亲密性）</div>
+        <div><span class="no">6</span>主按钮区 <code>margin-top:auto</code> 推底＋上方 24px 呼吸区；印章落款补足民国仪式感</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ 60-30-10 色彩比例 ════════ -->
+  <div class="palette">
+    <h2>· 色 彩 比 例 对 照（60-30-10 法则）·</h2>
+
+    <div class="bar-wrap">
+      <div class="cap">现状：四色 inline 撒满——强调色互相打架，等于没有强调</div>
+      <div class="bar bar-bad">
+        <div class="c1" style="width:46%">宣纸 46%</div>
+        <div class="c2" style="width:28%">淡墨 28%</div>
+        <div class="c3a" style="width:9%">朱红 9%</div>
+        <div class="c3b" style="width:7%">绿 7%</div>
+        <div class="c3c" style="width:6%">金 6%</div>
+        <div class="c3d" style="width:4%">蓝 4%</div>
+      </div>
+    </div>
+
+    <div class="bar-wrap">
+      <div class="cap">修正：宣纸为底、墨为结构、朱红独占强调——一眼知道该看哪</div>
+      <div class="bar">
+        <div class="c1" style="width:60%">宣纸 60% —— 背景基调</div>
+        <div class="c2" style="width:30%">墨 30% —— 结构与正文</div>
+        <div class="c3" style="width:10%">朱红 10% —— 酬劳/主按钮</div>
+      </div>
+      <div class="bar-note">绿（绿圈）/ 金（解锁）降级为"词级点缀"（≤2 词/屏），不占比例条份额；铜金仅限奖励行边框。</div>
+    </div>
+  </div>
+
+  <!-- ════════ 规则映射表 ════════ -->
+  <table class="map">
+    <caption>· 诊 断 → 规 则 → 修 正 映 射 ·</caption>
+    <tr><th style="width:26%">症状</th><th style="width:37%">违反的规则（出处）</th><th style="width:37%">修正</th></tr>
+    <tr><td class="sym">说不清哪里不对但就是乱</td><td>随机字号 = 视觉噪音（Typography: Use a Type Scale）</td><td class="fix">字号三档 14/16/20，1.4 比例</td></tr>
+    <tr><td class="sym">不知道先看哪</td><td>层级平铺，无第一焦点（Gestalt·Figure-Ground）</td><td class="fix">状态数字 20px 加粗＋朱红锚点</td></tr>
+    <tr><td class="sym">信息块糊成一团</td><td>组内间距 ≥ 组间间距（CRAP·Proximity 亲密性）</td><td class="fix">细墨线分组，组内 8 / 组间 24</td></tr>
+    <tr><td class="sym">间距"差一点"的难受</td><td>奇数值 2/4/6 脱离 8pt 网格（8-Point Grid）</td><td class="fix">间距只用 8 的倍数（8/16/24）</td></tr>
+    <tr><td class="sym">满屏彩色很"吵"</td><td>强调色无比例（60-30-10 / NN/g）</td><td class="fix">朱红限 3 处：酬劳数字＋主按钮＋印章</td></tr>
+    <tr><td class="sym">拥挤、廉价感</td><td>无留白（horror vacui；计白当黑——留白是构图实体）</td><td class="fix">操作区上方 24px 呼吸区，版面留白 ≥20%</td></tr>
+    <tr><td class="sym">像通用 SaaS 不像民国</td><td>风格断裂：民国题材 + 现代面板逻辑（月份牌/报纸判例）</td><td class="fix">细墨线、菱形点标题、印章落款、字距加宽</td></tr>
+  </table>
+
+  <footer>
+    贴图来源：<b>ai-town/Assets/Resources/UI/</b>（panel_bg / button / button_red 实拍资产，与游戏内同源）<br>
+    规则出处：<b>classical-aesthetics-ui skill</b>（~/.agents/skills/classical-aesthetics-ui/）· 格式塔 / CRAP / 60-30-10 / 8pt Grid / 计白当黑<br>
+    GENERATED 2026-08-29 · docs/ui-audit/index.html
+  </footer>
+</div>
+</body>
+</html>

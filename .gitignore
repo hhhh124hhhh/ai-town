@@ -37,3 +37,8 @@ desktop.ini
 server/state.json
 server/*.log
 server/__pycache__/
+
+# 2026-08-29 成文：agent 本地状态按约定不入库（防 git add -A 误收）
+.codely/
+.codely-cli/
+CODELY.md
