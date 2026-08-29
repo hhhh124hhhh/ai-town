@@ -1052,7 +1052,12 @@ public class CommissionSystem : MonoBehaviour
 
     // ── 放置系统对接（BuildingPlacement 调用）──────────────────────────
     private Vector3? _lastPlacedPos;   // 最近一次建筑落点（XZ 上报服务端）
-    private Vector2? _zoneGuideCenter; // 绿圈导航圆心（HUD 方位距离用；落位跟随，验收/清委托清空）
+    private Vector2? _zoneGuideCenter; // 绿圈导航圆心（HUD 方位/世界箭头用；落位跟随，验收/清委托清空）
+
+    /// <summary>绿圈导航圆心是否有效（CommissionArrow 世界箭头数据源）。</summary>
+    public bool HasZoneGuide => _zoneGuideCenter.HasValue;
+    /// <summary>绿圈导航圆心（XZ）。HasZoneGuide 为 true 时有效。</summary>
+    public Vector2 ZoneGuideCenter => _zoneGuideCenter ?? Vector2.zero;
 
     /// <summary>建筑放置确认后调用：绿圈圆心跟随建筑落位。</summary>
     public void OnBuildPlaced(Vector3 pos)
