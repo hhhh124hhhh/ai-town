@@ -33,7 +33,7 @@ namespace AiTown.EditorTools
         private static readonly Color DuskFog = new Color(0.83f, 0.70f, 0.58f);
         private static readonly Color DuskSkyTint = new Color(1.00f, 0.78f, 0.58f);
         private const float FogStart = 28f;
-        private const float FogEnd = 85f;
+        private const float FogEnd = 75f; // 明度校准 2026-08-29：85→75，雾色偏亮收短让远景落进阴影段（阴影 10%→15%+）
 
         [MenuItem("Tools/AI Town/Apply Dusk Lighting")]
         public static void Apply()
@@ -172,10 +172,10 @@ namespace AiTown.EditorTools
                 ca = profile.Add<ColorAdjustments>();
                 ca.name = "ColorAdjustments";
             }
-            ca.postExposure.Override(0.1f);
+            ca.postExposure.Override(-0.1f);
             ca.colorFilter.Override(new Color(1.02f, 0.94f, 0.86f));
             ca.saturation.Override(8f);
-            ca.contrast.Override(6f);
+            ca.contrast.Override(14f); // 明度校准 2026-08-29：6→14，拉开明暗把中间调挤向阴影/高光两端（中间调 65%→<65%）
             EditorUtility.SetDirty(ca);
             EditorUtility.SetDirty(profile);
         }

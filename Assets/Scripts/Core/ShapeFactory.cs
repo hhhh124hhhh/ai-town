@@ -27,6 +27,10 @@ public static class ShapeFactory
     public static GameObject Create(string shape, Vector3 pos, Vector3 size, Material sharedMat)
     {
         GameObject obj;
+        // Unity 内置 Cylinder 网格本身高 2 个单位（y∈[-1,1]），其余原始体高/径均为 1。
+        // 建筑契约是 pos=方块中心、size=实际尺寸（米）：圆柱纵向缩放减半，否则块会
+        // 向下多埋一半高度，放置系统的包围盒贴地会把整栋建筑抬到半空。
+        bool unityCylinder = false;
         switch (shape)
         {
             case "box" or "solid":
@@ -34,6 +38,7 @@ public static class ShapeFactory
                 break;
             case "cyl" or "cylinder":
                 obj = CreatePrimitive(PrimitiveType.Cylinder);
+                unityCylinder = true;
                 break;
             case "sphere":
                 obj = CreatePrimitive(PrimitiveType.Sphere);
@@ -61,7 +66,9 @@ public static class ShapeFactory
         if (obj != null)
         {
             obj.transform.position = pos;
-            obj.transform.localScale = size;
+            obj.transform.localScale = unityCylinder
+                ? new Vector3(size.x, size.y * 0.5f, size.z)
+                : size;
             obj.name = $"{shape}_{pos.x:0}_{pos.y:0}_{pos.z:0}";
 
             Renderer renderer = obj.GetComponentInChildren<Renderer>();
@@ -76,7 +83,8 @@ public static class ShapeFactory
         return obj;
     }
 
-    /// <summary>圆锥（底面半径 0.5 高 1，与内置 Primitive 同规格，靠 losscale 缩放）。</summary>
+    /// <summary>圆锥（底面半径 0.5、高 1 且轴心在几何中心 y∈[-0.5,0.5]，
+    /// 与内置 Primitive 同规格，靠 lossScale 缩放；中心语义 pos=块中心）。</summary>
     private static GameObject CreateCone()
     {
         return BuildMeshObject(MeshBuilder.Cone(segments: 16, radius: 0.5f, height: 1f, cap: true));
@@ -88,7 +96,7 @@ public static class ShapeFactory
         return BuildMeshObject(MeshBuilder.Pyramid(baseHalf: 0.5f, height: 1f));
     }
 
-    /// <summary>半球穹顶（半径 0.5，底在 y=0）。</summary>
+    /// <summary>半球穹顶（半径 0.5，底面贴块盒底 y=-0.5、顶 y=0——中心语义下穹顶天然只占块盒下半）。</summary>
     private static GameObject CreateDome()
     {
         return BuildMeshObject(MeshBuilder.Dome(segments: 16, rings: 8, radius: 0.5f));
@@ -183,11 +191,13 @@ internal static class MeshBuilder
         var verts = new System.Collections.Generic.List<Vector3>();
         var tris = new System.Collections.Generic.List<int>();
 
-        verts.Add(new Vector3(0, height, 0)); // 顶点
+        // 轴心居中：底面 -h/2、顶点 +h/2（json 端 _hex_cone 按 pos=块中心 出坐标）
+        float half = height * 0.5f;
+        verts.Add(new Vector3(0, half, 0)); // 顶点
         for (int i = 0; i <= segments; i++)
         {
             float a = i / (float)segments * Mathf.PI * 2f;
-            verts.Add(new Vector3(Mathf.Cos(a) * radius, 0, Mathf.Sin(a) * radius));
+            verts.Add(new Vector3(Mathf.Cos(a) * radius, -half, Mathf.Sin(a) * radius));
         }
         for (int i = 1; i <= segments; i++)
         {
@@ -196,7 +206,7 @@ internal static class MeshBuilder
         if (cap)
         {
             int center = verts.Count;
-            verts.Add(new Vector3(0, 0, 0));
+            verts.Add(new Vector3(0, -half, 0));
             for (int i = 1; i <= segments; i++)
             {
                 tris.Add(center); tris.Add(i + 1); tris.Add(i);
@@ -213,11 +223,13 @@ internal static class MeshBuilder
     public static Mesh Pyramid(float baseHalf, float height)
     {
         var mesh = new Mesh { name = "pyramid" };
-        Vector3 apex = new Vector3(0, height, 0);
-        Vector3 b0 = new Vector3(-baseHalf, 0, -baseHalf);
-        Vector3 b1 = new Vector3(baseHalf, 0, -baseHalf);
-        Vector3 b2 = new Vector3(baseHalf, 0, baseHalf);
-        Vector3 b3 = new Vector3(-baseHalf, 0, baseHalf);
+        // 轴心居中：底面 -h/2、塔尖 +h/2
+        Vector3 apex = new Vector3(0, height * 0.5f, 0);
+        float baseY = -height * 0.5f;
+        Vector3 b0 = new Vector3(-baseHalf, baseY, -baseHalf);
+        Vector3 b1 = new Vector3(baseHalf, baseY, -baseHalf);
+        Vector3 b2 = new Vector3(baseHalf, baseY, baseHalf);
+        Vector3 b3 = new Vector3(-baseHalf, baseY, baseHalf);
 
         mesh.vertices = new[] { b0, b1, b2, b3, apex };
         mesh.triangles = new[]
@@ -243,7 +255,7 @@ internal static class MeshBuilder
         for (int r = 0; r <= rings; r++)
         {
             float phi = r / (float)rings * Mathf.PI / 2f; // 0..90°
-            float y = Mathf.Sin(phi) * radius;
+            float y = Mathf.Sin(phi) * radius - radius;   // 底面 -radius，顶 +0
             float ringR = Mathf.Cos(phi) * radius;
             for (int s = 0; s <= segments; s++)
             {
