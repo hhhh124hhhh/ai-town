@@ -20,11 +20,11 @@
       "note": "河流系统桥头引路（曾漏检，务必保留）" }
   ],
   "districts": [
-    { "name": "core_plaza",      "rect": [-7.5, 7.0, -12.5, 5.5],   "allow": ["furniture", "lamp", "flag", "well", "fire", "cart", "crate", "building"], "note": "广场：家具灯旗合法，树禁入" },
+    { "name": "core_plaza",      "rect": [-7.5, 7.0, -12.5, 5.5],   "allow": ["furniture", "lamp", "flag", "lantern", "well", "fire", "cart", "crate", "building"], "note": "广场：家具灯旗合法，树禁入" },
     { "name": "market_east",     "rect": [14.0, 25.5, -12.0, -5.0], "allow": ["furniture", "crate", "lamp", "flag", "cart", "building"], "note": "东货栈市集" },
-    { "name": "qilou_street",    "rect": [0.0, 27.5, -15.5, -9.5],  "allow": ["lamp", "flag", "building"], "note": "骑楼街带（两岸），街上禁物" },
+    { "name": "qilou_street",    "rect": [0.0, 27.5, -15.5, -9.5],  "allow": ["lamp", "flag", "lantern", "building"], "note": "骑楼街带（两岸），街上禁物" },
     { "name": "ns_street",       "rect": [6.5, 10.5, -12.0, 1.0],   "allow": ["lamp", "building"], "note": "NS 竖街" },
-    { "name": "south_road",      "rect": [-2.5, 2.5, -21.0, -12.0], "allow": ["fence", "lamp", "paifang"], "note": "出镇土路+引路" },
+    { "name": "south_road",      "rect": [-2.5, 2.5, -21.0, -12.0], "allow": ["fence", "lamp", "paifang", "lantern"], "note": "出镇土路+引路" },
     { "name": "west_lane",       "rect": [-6.5, -2.0, -1.5, 5.5],   "allow": ["lamp", "fence", "building"], "note": "西巷" },
     { "name": "grass",           "rect": [-25, 30, -30, -12],       "allow": ["tree", "fence", "building"], "note": "镇南荒地默认区" },
     { "name": "spawn_safe",      "rect": [-4, 4, -9.6, -1.6],       "allow": [], "note": "出生点安全区（绕 SpawnPoint 4m），禁一切道具" }

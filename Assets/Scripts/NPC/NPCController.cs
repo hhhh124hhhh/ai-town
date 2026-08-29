@@ -191,6 +191,7 @@ public class NPCController : MonoBehaviour
             alignment = TextAnchor.MiddleCenter,
             fontSize = 15,
             richText = true,
+            font = UiTheme.KaiFont,
             normal = { textColor = Color.white },
         };
         var shadowStyle = new GUIStyle(labelStyle) { normal = { textColor = new Color(0f, 0f, 0f, 0.85f) } };
@@ -206,6 +207,7 @@ public class NPCController : MonoBehaviour
                 alignment = TextAnchor.UpperCenter,
                 fontSize = 14,
                 wordWrap = true,
+                font = UiTheme.KaiFont,
                 normal = { textColor = new Color(1f, 1f, 0.85f) },
                 stretchWidth = false,
             };

@@ -20,6 +20,7 @@ public static class UiTheme
     private static bool _loaded;
     private static Texture2D _panel, _hud, _btn, _btnHover, _btnActive, _btnRed, _card;
     private static Texture2D _solidInk, _solidPaper, _solidRed;
+    private static Font _kaiFont;
 
     private static GUIStyle _panelBox, _hudBox, _cardBox, _btnStyle, _btnPrimary, _title, _body, _hint, _field;
 
@@ -66,6 +67,10 @@ public static class UiTheme
     /// <summary>输入框。</summary>
     public static GUIStyle Field { get { EnsureStyles(); return _field; } }
 
+    /// <summary>民国楷体（Resources/Fonts/KaiTi.ttf，simkai）。缺失时为 null，
+    /// 各样式自行回退默认字体。</summary>
+    public static Font KaiFont { get { EnsureLoaded(); return _kaiFont; } }
+
     private static readonly Dictionary<int, GUIStyle> _textCache = new Dictionary<int, GUIStyle>();
 
     /// <summary>
@@ -95,6 +100,7 @@ public static class UiTheme
             richText = true,
             fontSize = size,
             wordWrap = true,
+            font = _kaiFont,
         };
         _textCache[size] = InkAllStates(style, Ink);
         return style;
@@ -112,6 +118,7 @@ public static class UiTheme
         _btnActive = Resources.Load<Texture2D>("UI/button_active");
         _btnRed = Resources.Load<Texture2D>("UI/button_red");
         _card = Resources.Load<Texture2D>("UI/card_bg");
+        _kaiFont = Resources.Load<Font>("Fonts/KaiTi");
         _solidInk = Solid(new Color32(0x33, 0x2C, 0x24, 0xF0));
         _solidPaper = Solid(new Color32(0xEF, 0xE4, 0xCB, 0xF2));
         _solidRed = Solid(Vermilion);
@@ -145,11 +152,12 @@ public static class UiTheme
         {
             fontStyle = FontStyle.Bold,
             fontSize = 20,
+            font = _kaiFont,
         }, Ink);
 
-        _body = InkAllStates(new GUIStyle(GUI.skin.label) { richText = true, fontSize = 16 }, Ink);
+        _body = InkAllStates(new GUIStyle(GUI.skin.label) { richText = true, fontSize = 16, font = _kaiFont }, Ink);
 
-        _hint = InkAllStates(new GUIStyle(GUI.skin.label) { richText = true, fontSize = 14 }, InkSoft);
+        _hint = InkAllStates(new GUIStyle(GUI.skin.label) { richText = true, fontSize = 14, font = _kaiFont }, InkSoft);
 
         _field = new GUIStyle(GUI.skin.textField);
         // 输入框底用内置 whiteTexture（运行时自建贴图在团结下会失效跌回深色默认皮肤）
@@ -165,6 +173,7 @@ public static class UiTheme
         _field.hover.textColor = Ink;
         _field.active.textColor = Ink;
         _field.fontSize = 16;
+        _field.font = _kaiFont;
     }
 
     private static GUIStyle MakeBox(Texture2D bg, RectOffset border, int padding, Color textColor, int fontSize)
@@ -173,6 +182,7 @@ public static class UiTheme
         {
             border = border,
             padding = new RectOffset(padding, padding, padding, padding),
+            font = _kaiFont,
         };
         if (bg != null) s.normal.background = bg;
         InkAllStates(s, textColor);
@@ -188,6 +198,7 @@ public static class UiTheme
             border = border,
             padding = new RectOffset(10, 10, 6, 6),
             fontSize = fontSize,
+            font = _kaiFont,
         };
         // hover/active 未提供贴图时固定沿用 normal 背景：
         // 留空会继承默认皮肤的灰白高亮，鼠标悬停时整块跳变（民国底色全丢）

@@ -162,7 +162,8 @@ namespace AiTown.EditorTools
                         if (type == "水井" || type == "篝火" || type == "长椅" || type == "马车" || type == "旗帜" || type == "木箱") return true;
                         break;
                     case "lamp": if (type == "路灯") return true; break;
-                    case "flag": if (type == "旗帜") return true; break;
+                    case "flag": if (type == "旗帜" || type == "酒旗") return true; break;
+                    case "lantern": if (type == "灯笼柱") return true; break;
                     case "crate": if (type == "木箱") return true; break;
                     case "well": if (type == "水井") return true; break;
                     case "fire": if (type == "篝火") return true; break;
