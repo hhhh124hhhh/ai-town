@@ -53,9 +53,15 @@ public class BuildingPanel : MonoBehaviour
 #if ENABLE_INPUT_SYSTEM
         var kb = UnityEngine.InputSystem.Keyboard.current;
         // Tab 永远可切换面板（含放置模式——打字焦点残留/放置中都算唯一逃生口；隐藏时一并释放焦点）
+        // v2 互斥：Tab 切换走 UiPanelLayout 协调器（开建筑自动关委托；对话打开时 Tab 先关对话）
         if (kb != null && kb.tabKey.wasPressedThisFrame)
         {
-            _visible = !_visible;
+            if (DialogSystem.Instance != null) { DialogSystem.Instance.CloseByUser(); }
+            else
+            {
+                UiPanelLayout.Request(UiPanelLayout.Panel.Building);
+                _visible = UiPanelLayout.BuildingVisible;
+            }
             if (!_visible) UiTextFocus.Clear();
         }
         if (BuildingPlacement.Active) return; // 放置期间其余输入归放置模式（回车不再触发生成）
@@ -82,8 +88,8 @@ public class BuildingPanel : MonoBehaviour
         }
 
         UiTheme.BeginScale();
-        // v2 panel_main 9-slice（border 78+padding 96 由 UiTheme.Panel 自带），外尺寸 480×560
-        var areaRect = new Rect(16, 16, 480, Mathf.Min(560f, UiTheme.VH - 60f));
+        // v2 panel_main 9-slice（border 78+padding 96 由 UiTheme.Panel 自带），外尺寸 420×500
+        var areaRect = new Rect(16, 16, 420, Mathf.Min(500f, UiTheme.VH - 60f));
         GUILayout.BeginArea(areaRect, UiTheme.Panel);
         UiTheme.Wash(areaRect);
 

@@ -179,7 +179,9 @@ public class CommissionSystem : MonoBehaviour
                 && !BuildingPlacement.Active && !UiTextFocus.IsTyping)
             {
                 if (_panelVisible) RefreshNpcCache(); // 面板里可能新增了 NPC
-                _panelVisible = !_panelVisible;
+                // v2 互斥：C 切换走 UiPanelLayout（开委托自动关建筑）
+                UiPanelLayout.Request(UiPanelLayout.Panel.Commission);
+                _panelVisible = UiPanelLayout.CommissionVisible;
             }
         }
 #endif
@@ -287,9 +289,9 @@ public class CommissionSystem : MonoBehaviour
 
     private void DrawPanel()
     {
-        // v2 panel_main 9-slice border 78 + padding 96（UiTheme.Panel 自带），面板外尺寸据此放大
-        float w = 480f;
-        float h = Mathf.Min(560f, UiTheme.VH - 130f);
+        // v2 panel_main 9-slice border 78 + padding 96（UiTheme.Panel 自带）；420 宽 = 3×96 + 1 字高
+        float w = 420f;
+        float h = Mathf.Min(500f, UiTheme.VH - 130f);
         var rect = new Rect(UiTheme.VW - w - UiTheme.RightMargin, _hudBottom + 16f, w, h); // 动态挂 HUD 下方
 
         GUILayout.BeginArea(rect, UiTheme.Panel);

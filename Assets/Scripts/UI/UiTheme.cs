@@ -49,9 +49,10 @@ public static class UiTheme
         _btnStyle, _btnLocked, _btnPrimary, _title, _body, _hint, _field, _secHead, _richStyle;
 
     // ── 全局缩放（高分屏 IMGUI 字号过小的根治）─────────────────────────
-    /// <summary>GUI 全局缩放：1080p≈1.2、1440p≈1.6、720p=1。IMGUI 字号不随分辨率变，
-    /// 2K/4K 下 12px 字小到不可读，统一按渲染高度放大整套 UI。</summary>
-    public static float Scale => Mathf.Clamp(Screen.height / 840f, 1f, 2.2f);
+    /// <summary>GUI 全局缩放：参照 1080p=1.0（2026-08-29 从 840 提到 1080——用户实测
+    /// 840 参照下面板占屏过大、字相对太小，违反"字高=容器 50~60%"法则；整体缩到 78%
+    /// 后字号相对放大约 27%）。</summary>
+    public static float Scale => Mathf.Clamp(Screen.height / 1080f, 0.9f, 1.8f);
     /// <summary>缩放后坐标系里的虚拟屏宽（布局定位一律用它，别直接用 Screen.width）。</summary>
     public static float VW => Screen.width / Scale;
     /// <summary>缩放后坐标系里的虚拟屏高。</summary>

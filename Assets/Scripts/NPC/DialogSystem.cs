@@ -88,6 +88,9 @@ public class DialogSystem : MonoBehaviour
         _history.Add($"【{npc.npcName}】{GetGreeting(npc)}");
         npc.ShowBubble(GetGreeting(npc));
 
+        // v2 互斥：对话优先级最高，打开时强制关建筑/委托面板（用户实测三面板重叠灾难）
+        UiPanelLayout.Request(UiPanelLayout.Panel.Dialog);
+
         EnsureUgui();
         _focusNextUgui = true;
         RefreshQuickAsks(); // 首帧 OnGUI 就有快捷项（Update 还没轮到）
@@ -110,9 +113,13 @@ public class DialogSystem : MonoBehaviour
         Target = null;
         if (_fpc != null) _fpc.enabled = _fpcWasEnabled;
         _fpc = null;
+        UiPanelLayout.Clear(); // v2 互斥：对话关闭清协调器（面板可再开）
         if (_uiRoot != null) Destroy(_uiRoot);
         Destroy(gameObject);
     }
+
+    /// <summary>用户按键（Tab）请求关对话：走 Close 的公共入口（互斥状态同步）。</summary>
+    public void CloseByUser() => Close();
 
     private void Update()
     {
@@ -204,15 +211,16 @@ public class DialogSystem : MonoBehaviour
         if (Target == null) return;
 
         UiTheme.BeginScale();
-        float w = Mathf.Min(UiTheme.VW * 0.62f, 720f);
-        // 高度构成（虚拟坐标，v2 panel_tall border140+padding154 由 PanelTall 自带）：
-        // 标题(~34)+Space8+历史区 136+快捷按钮(36+Space8)+Space8+输入行 40 ≈ 270 内容
-        // + 上下 padding 154×2（9-slice 内缩）→ 面板总高 560 取整；不够时 IMGUI 溢出
-        // 不裁剪，输入行会被挤出面板底框掉到屏幕外（历史 bug 根因），宁大勿小。
-        float h = 560f;
-        var rect = new Rect((UiTheme.VW - w) / 2f, UiTheme.VH - h - 28f, w, h);
+        // 矮宽聊天条（2026-08-29 用户实测 560 高面板挡 NPC 后改）：宽 640、高 400 贴底，
+        // NPC 头+名牌在画面上半区不被遮挡（图底关系：游戏画面优先于 UI）。
+        // 高度构成：标题(~30)+Space8+历史区 96+快捷按钮(36)+Space8+输入行 40 ≈ 218 内容
+        // + panel_tall 上下 border140（内缩后 padding 154×2 在 400 高下溢出风险）→
+        // 改用 Panel（panel_main border78+padding96×2=192）+ 218 ≈ 410，取 420 留余量。
+        float w = Mathf.Min(UiTheme.VW * 0.58f, 640f);
+        float h = 420f;
+        var rect = new Rect((UiTheme.VW - w) / 2f, UiTheme.VH - h - 16f, w, h);
 
-        GUILayout.BeginArea(rect, UiTheme.PanelTall);
+        GUILayout.BeginArea(rect, UiTheme.Panel);
         UiTheme.Wash(rect);
 
         // ── 行 1：标题（说话人识别靠粗体名+淡墨角色，不加字号档）──
@@ -222,9 +230,8 @@ public class DialogSystem : MonoBehaviour
         // ── 行 2：历史区（固定高度。不能 ExpandHeight：GUILayout 滚动区不锁高时
         //    最小高度=内容高度，对话一长就把按钮/输入行挤出面板底框（uGUI 输入行
         //    随 reserved 掉出面板）→"输入框不见了"。固定高+滚动+自动到底才是聊天条正解。
-        //    滚动条隐藏——默认黑胶囊与宣纸风冲突，滚轮+自动到底已覆盖需求）
-        //    说话人前缀色：【名】朱红=NPC、名=墨粗=玩家（识别优于回忆）──
-        _scroll = GUILayout.BeginScrollView(_scroll, GUIStyle.none, GUIStyle.none, GUILayout.Height(136));
+        //    说话人前缀色：【名】=NPC 问候，玩家回复=墨粗（识别优于回忆）──
+        _scroll = GUILayout.BeginScrollView(_scroll, GUIStyle.none, GUIStyle.none, GUILayout.Height(96));
         foreach (string line in _history)
         {
             GUILayout.Label(line, UiTheme.Text(UiTheme.SizeBody));
@@ -236,7 +243,7 @@ public class DialogSystem : MonoBehaviour
         }
         GUILayout.EndScrollView();
 
-        // ── 行 3：快捷问题三个按钮并排（32 高+组内自然间距）──
+        // ── 行 3：快捷问题三个按钮并排（36 高+组内自然间距）──
         GUILayout.Space(8f);
         GUILayout.BeginHorizontal();
         foreach (var (label, question) in _quickAsks)
