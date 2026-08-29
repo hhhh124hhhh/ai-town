@@ -14,6 +14,19 @@ public class CommissionSystem : MonoBehaviour
     private static CommissionSystem _instance;
     public static CommissionSystem Instance => _instance;
 
+    /// <summary>是否有进行中的委托（BuildingPanel 打开时据此决定是否创建绿圈）。</summary>
+    public bool HasActiveCommission => _state?.active != null;
+
+    /// <summary>确保绿圈存在（BuildingPanel 打开时调用，延迟显示绿圈）。</summary>
+    public void EnsureZoneRing()
+    {
+        if (_state?.active != null && _zoneRing == null)
+        {
+            ResolveZonePlacement(_state.active);
+            CreateZoneRing(_state.active);
+        }
+    }
+
     // ── 服务端 JSON 镜像（字段名与 server/commission_ai.py 对齐）──────────
     [Serializable]
     public class CommissionInfo
@@ -778,9 +791,10 @@ public class CommissionSystem : MonoBehaviour
         _resultBox = "";
         _commissionIssuedAt = Time.unscaledTime; // 箭头 60s 兜底起点
         ResolveZonePlacement(resp.commission); // 绿圈空地解析（占用了自动挪到附近空位）
-        CreateZoneRing(resp.commission);
+        // 2026-08-29 修复：接委托时不立即创建绿圈，等打开建筑面板时才显示
+        // CreateZoneRing(resp.commission);
         npc.ShowBubble($"委托：{resp.commission.title}（[C] 查看详情）", 8f);
-        _status = $"<color=green>已接下「{resp.commission.title}」，在绿圈内用 Tab 面板建造，建完按 [C] 提交验收</color>";
+        _status = $"<color=green>已接下「{resp.commission.title}」，按 [Tab] 建造，建完按 [C] 提交验收</color>";
     }
 
     // ── 绿圈空地解析（2026-08-29 用户改布局后"绿圈被建筑占了"）────────────
@@ -1084,6 +1098,12 @@ public class CommissionSystem : MonoBehaviour
         _builds.Clear();
         _resultBox = "";
         _status = "已放弃委托，可以重新接单";
+        
+        // 放弃后通知 DialogSystem 刷新快捷提问（2026-08-29 修复：NPC 还提示有活没干完）
+        if (DialogSystem.Instance != null)
+        {
+            DialogSystem.Instance.RefreshQuickAsks();
+        }
     }
 
     // ── 辅助 ──────────────────────────────────────────────────────────────

@@ -100,7 +100,16 @@ public class BuildingPanel : MonoBehaviour
     {
         // 单一真源（2026-08-29 用户"面板不能乱跳"定则）：可见性每帧从协调器派生——
         // 任何 C/E/×/生成 引发的 Request/Close/Clear 本帧立即生效，不留过期拷贝
+        bool wasVisible = _visible;
         _visible = UiPanelLayout.BuildingVisible;
+        
+        // 2026-08-29 修复：面板从关闭变为打开时，立即创建绿圈（延迟显示）
+        if (!wasVisible && _visible && CommissionSystem.Instance != null 
+            && CommissionSystem.Instance.HasActiveCommission)
+        {
+            CommissionSystem.Instance.EnsureZoneRing();
+        }
+        
         if (!_visible || CinematicIntro.IsCinematic)
         {
             // 面板不可见时不得持有键盘焦点,否则 WASD 一直打进隐藏输入框

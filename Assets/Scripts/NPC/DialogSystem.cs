@@ -171,7 +171,7 @@ public class DialogSystem : MonoBehaviour
     /// 无委托 → 头条就是"接个委托"（直接驱动接单）；有本 NPC 的委托 → 问要求/诀窍；
     /// 有别人的委托 → 打听消息。数字键 1/2/3 与按钮共用此列表。
     /// </summary>
-    private void RefreshQuickAsks()
+    public void RefreshQuickAsks()
     {
         if (Target == null) return;
         if (_quickAsksFor == Target && _quickAsks.Count > 0
