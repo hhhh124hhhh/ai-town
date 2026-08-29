@@ -1,6 +1,6 @@
 <div align="center">
 
-![AI 小镇 · 民国黄昏镇中心广场](Docs/images/banner_town.jpg)
+![AI 小镇 · 民国黄昏镇中心广场](Docs/images/banner_plaza.jpg)
 
 # 🏮 AI 小镇 · 说出愿望，落地成真
 
@@ -15,7 +15,7 @@
 
 </div>
 
-> 封面是镇中心的黄昏实拍（青砖洋楼 + 骑楼街 + 牌坊 + 护城河）。编辑器里没有建筑不代表小镇是空的 —— 按 ▶️ Play，它会自己"长"出来。
+> 封面为引擎内实机直出（Game View，镇心广场黄昏）。编辑器里没有建筑不代表小镇是空的编辑器里没有建筑不代表小镇是空的 —— 按 ▶️ Play，它会自己"长"出来。
 
 ---
 
@@ -86,9 +86,9 @@
 
 ## 📸 实拍
 
-| 镇貌全景 | 街上会遇见人 | 护城河与石桥 |
+| 镇心广场 · 黄昏灯上 | 镇口牌坊 · 主街 | 老洋楼 · 斜阳旗影 |
 |---|---|---|
-| ![镇貌全景](Docs/images/town_overview.jpg) | ![NPC 街景](Docs/images/npc_street.jpg) | ![护城河](Docs/images/moat_river.jpg) |
+| ![镇心广场](Docs/images/town_plaza.jpg) | ![镇口牌坊](Docs/images/gate_paifang.jpg) | ![老洋楼](Docs/images/mansion_dusk.jpg) |
 
 ---
 
