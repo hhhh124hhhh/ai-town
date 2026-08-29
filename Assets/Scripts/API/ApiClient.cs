@@ -16,6 +16,14 @@ public class ApiClient : MonoBehaviour
     [Tooltip("请求超时（秒）。LLM 类接口（对话/委托/开场白）固定用 65s，不随此值。")]
     public float timeoutSeconds = 15f;
 
+    /// <summary>网络不通时的统一提示（后端未启动是最常见原因）。</summary>
+    private const string ServerHint = "（请先双击运行 server/start_server.command 启动后端）";
+
+    private static string NetError(string raw)
+    {
+        return $"网络错误: {raw}{ServerHint}";
+    }
+
     public static ApiClient Instance { get; private set; }
 
     /// <summary>
@@ -90,7 +98,7 @@ public class ApiClient : MonoBehaviour
 
             if (request.result != UnityWebRequest.Result.Success)
             {
-                onError?.Invoke($"网络错误: {request.error}");
+                onError?.Invoke(NetError(request.error));
                 yield break;
             }
 
@@ -136,7 +144,7 @@ public class ApiClient : MonoBehaviour
             yield return request.SendWebRequest();
             if (request.result != UnityWebRequest.Result.Success)
             {
-                onError?.Invoke($"网络错误: {request.error}");
+                onError?.Invoke(NetError(request.error));
                 yield break;
             }
             try
@@ -168,7 +176,7 @@ public class ApiClient : MonoBehaviour
             yield return request.SendWebRequest();
             if (request.result != UnityWebRequest.Result.Success)
             {
-                onError?.Invoke($"网络错误: {request.error}");
+                onError?.Invoke(NetError(request.error));
                 yield break;
             }
             onJson?.Invoke(request.downloadHandler.text);
@@ -207,7 +215,7 @@ public class ApiClient : MonoBehaviour
             yield return request.SendWebRequest();
             if (request.result != UnityWebRequest.Result.Success)
             {
-                onError?.Invoke($"网络错误: {request.error}");
+                onError?.Invoke(NetError(request.error));
                 yield break;
             }
             onJson?.Invoke(request.downloadHandler.text);
@@ -244,7 +252,7 @@ public class ApiClient : MonoBehaviour
 
             if (request.result != UnityWebRequest.Result.Success)
             {
-                onError?.Invoke($"网络错误: {request.error}（确认 ai_town_server.py 已启动）");
+                onError?.Invoke(NetError(request.error));
                 yield break;
             }
 
