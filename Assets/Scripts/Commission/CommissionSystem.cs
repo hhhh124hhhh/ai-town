@@ -1129,12 +1129,13 @@ public class CommissionSystem : MonoBehaviour
         WriteRingPoints(lr, center, radius);
 
         // 地面圆盘：验收区域整块淡绿（y=0.05 垫在路网 0.035 之上防闪面）
+        // 2026-08-29 修复：alpha 0.16→0.05，避免整个场景底部被染绿
         var diskGo = new GameObject("ZoneDisk");
         diskGo.transform.SetParent(root.transform, false);
         var mf = diskGo.AddComponent<MeshFilter>();
         mf.sharedMesh = BuildDiskMesh(radius);
         var mr = diskGo.AddComponent<MeshRenderer>();
-        mr.material = RuntimeFxMat.Make(new Color(0.25f, 1f, 0.45f, 0.16f)); // 淡绿圆盘
+        mr.material = RuntimeFxMat.Make(new Color(0.25f, 1f, 0.45f, 0.05f)); // 极淡绿，只提示区域
         diskGo.transform.position = new Vector3(center.x, 0.05f, center.y);
     }
 
