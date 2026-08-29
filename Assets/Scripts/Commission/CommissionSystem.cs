@@ -1143,9 +1143,10 @@ public class CommissionSystem : MonoBehaviour
         lr.useWorldSpace = true;
         lr.widthMultiplier = 0.35f;
         lr.positionCount = 65;
-        lr.material = RuntimeFxMat.Make(Color.white); // 材质用白色，颜色由 startColor/endColor 控制
-        lr.startColor = new Color(0.25f, 1f, 0.45f, 0.95f); // 绿色圈线
-        lr.endColor = new Color(0.25f, 1f, 0.45f, 0.95f);
+        lr.material = RuntimeFxMat.Make(Color.white); // 材质用白色，颜色由 LineRenderer 控制
+        // 2026-08-29 修复：降低饱和度/透明度，融入黄昏场景（之前绿色太亮太刺眼）
+        lr.startColor = new Color(0.4f, 0.7f, 0.5f, 0.4f); // 柔和青绿，半透明
+        lr.endColor = new Color(0.4f, 0.7f, 0.5f, 0.4f);
         WriteRingPoints(lr, center, radius);
 
         // 地面圆盘：验收区域整块淡绿（y=0.05 垫在路网 0.035 之上防闪面）
@@ -1155,7 +1156,7 @@ public class CommissionSystem : MonoBehaviour
         var mf = diskGo.AddComponent<MeshFilter>();
         mf.sharedMesh = BuildDiskMesh(radius);
         var mr = diskGo.AddComponent<MeshRenderer>();
-        mr.material = RuntimeFxMat.Make(new Color(0.25f, 1f, 0.45f, 0.05f)); // 极淡绿，只提示区域
+        mr.material = RuntimeFxMat.Make(new Color(0.4f, 0.7f, 0.5f, 0.08f)); // 极淡青绿，只提示区域
         diskGo.transform.position = new Vector3(center.x, 0.05f, center.y);
     }
 
