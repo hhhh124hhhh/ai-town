@@ -65,6 +65,7 @@ public class CinematicIntro : MonoBehaviour
     private string _toast = "";
     private bool _toastShown;
     private bool _titleFadeOut;
+    private int _dustMilestone;          // 生长里程碑落尘计数（每 25% 一档，共 4 档）
 
     // ── 场景引用 ──
     private Camera _introCam;
@@ -230,6 +231,20 @@ public class CinematicIntro : MonoBehaviour
                         _blocks[i].gameObject.SetActive(true);
                     }
                     lastReveal = upto;
+
+                    // 里程碑落尘：生长每过 ~25%，在刚点亮的方块地面起一蓬尘
+                    // （跳过 Handoff 不经过这里，天然满足"跳过时不播"）
+                    if (_dustMilestone < 4 && upto > 0
+                        && upto >= Mathf.CeilToInt(_blocks.Count * (_dustMilestone + 1) / 4f))
+                    {
+                        var anchor = _blocks[Mathf.Min(upto - 1, _blocks.Count - 1)];
+                        if (anchor != null)
+                        {
+                            EffectsCatalog.Play(EffectsCatalog.Dust,
+                                new Vector3(anchor.position.x, 0.05f, anchor.position.z));
+                        }
+                        _dustMilestone++;
+                    }
                 }
             }
             else

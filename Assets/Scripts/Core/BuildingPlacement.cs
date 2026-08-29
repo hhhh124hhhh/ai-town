@@ -387,8 +387,24 @@ public class BuildingPlacement : MonoBehaviour
         _real.SetActive(true);
         var real = _real;
         Cleanup();
-        StartCoroutine(DropIn(real)); // 落地动画：给确认动作"重量感"（成熟放置系统标配）
+        StartCoroutine(ConfirmCo(real)); // 落地动画 + 落地瞬间起尘（给"砸到地面"一个物理反馈）
         _onConfirmed?.Invoke(real);
+    }
+
+    /// <summary>确认落地流程：DropIn 动画收尾时在脚印中心起一蓬尘（缩放随建筑脚印）。</summary>
+    private IEnumerator ConfirmCo(GameObject building)
+    {
+        yield return DropIn(building);
+        if (building == null) yield break;
+
+        var renderers = building.GetComponentsInChildren<Renderer>();
+        if (renderers.Length == 0) yield break;
+
+        var bounds = renderers[0].bounds;
+        foreach (var r in renderers) bounds.Encapsulate(r.bounds);
+        float scale = Mathf.Clamp(Mathf.Max(bounds.size.x, bounds.size.z) / 4f, 1f, 2f);
+        EffectsCatalog.Play(EffectsCatalog.Dust,
+            new Vector3(bounds.center.x, 0.05f, bounds.center.z), scale);
     }
 
     /// <summary>

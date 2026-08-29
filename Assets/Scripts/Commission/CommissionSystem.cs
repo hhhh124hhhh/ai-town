@@ -520,6 +520,9 @@ public class CommissionSystem : MonoBehaviour
     private void ShowFlash(string grade, int gold, int prosperity, string unlock, int prevLevel)
     {
         AudioManager.Play("SFX_Gong");
+        // 交付庆典 confetti：与 DrawFlash 弹入同窗起（≤0.2s），位置=最近落位/绿圈中心
+        EffectsCatalog.Play(EffectsCatalog.Celebration, CelebratePos());
+
         _flashGrade = grade;
         _flashGold = gold;
         _flashProsperity = prosperity;
@@ -531,7 +534,26 @@ public class CommissionSystem : MonoBehaviour
         {
             _levelUpTo = _state.level;
             _flashUntil = _flashStart + 3.4f; // 升级时多看一会
+            StartCoroutine(LevelUpBurstCo()); // 升级追加一爆
         }
+    }
+
+    /// <summary>庆典特效落点：优先最近建筑落位，其次绿圈中心，兜底第一个 NPC。</summary>
+    private Vector3 CelebratePos()
+    {
+        if (_lastPlacedPos.HasValue)
+        {
+            return new Vector3(_lastPlacedPos.Value.x, 0.1f, _lastPlacedPos.Value.z);
+        }
+        var active = _state?.active;
+        if (active != null) return new Vector3(active.zoneX, 0.1f, active.zoneZ);
+        return _npcs.Count > 0 ? _npcs[0].transform.position : Vector3.zero;
+    }
+
+    private IEnumerator LevelUpBurstCo()
+    {
+        yield return new WaitForSecondsRealtime(1.0f);
+        EffectsCatalog.Play(EffectsCatalog.Celebration, CelebratePos() + Vector3.up * 1.2f);
     }
 
     private void DrawFlash()
