@@ -259,11 +259,31 @@ public class CommissionSystem : MonoBehaviour
         float h = Pad * 2f + s1.y + (line2 != null ? s2.y + 4f : 0f) + 10f;
         _hudBottom = 16f + h;
 
-        var rect = new Rect(UiTheme.VW - w - UiTheme.RightMargin, 16f, w, h); // 右缘让位 Cowork 侧条(仅编辑器)
+        // HUD 均衡布局（2026-08-29 用户定则）：左上=游戏状态（玩家第一眼扫左上），
+        // 右上让给系统/键位提示卡，底部中央=功能坞，委托弹窗居中——对称弹窗+均衡 HUD。
+        var rect = new Rect(UiTheme.RightMargin, 16f, w, h);
         GUILayout.BeginArea(rect, UiTheme.Hud);
         UiTheme.Wash(rect, 0.95f); // HUD 信息行多、v2 贴图也有纸纹，近实底才素净
         GUILayout.Label(line1, st);
         if (line2 != null) GUILayout.Label(line2, st);
+        GUILayout.EndArea();
+
+        DrawKeyHints(); // 右上：系统/键位卡（占小地图位）
+    }
+
+    /// <summary>右上角键位提示卡（均衡法则的系统位；本游戏无小地图，键位提示承担该角色）。</summary>
+    private static void DrawKeyHints()
+    {
+        var st = UiTheme.Hint;
+        var measure = new GUIStyle(st) { wordWrap = false };
+        string txt = "[Tab] 建造　[C] 委托　[E] 对话　[X] 回出生点";
+        var s = measure.CalcSize(new GUIContent(txt));
+        float w = s.x + 32f;
+        float h = s.y + 20f;
+        var rect = new Rect(UiTheme.VW - w - UiTheme.RightMargin, 16f, w, h);
+        GUILayout.BeginArea(rect, UiTheme.Hud);
+        UiTheme.Wash(rect, 0.85f);
+        GUILayout.Label(txt, st);
         GUILayout.EndArea();
     }
 
@@ -290,9 +310,10 @@ public class CommissionSystem : MonoBehaviour
     private void DrawPanel()
     {
         // v2 panel_main 9-slice border 78 + padding 96（UiTheme.Panel 自带）；420 宽 = 3×96 + 1 字高
+        // 委托大厅=弹窗型功能面板，按弹窗对称规则居中显示（2026-08-29 用户 HUD 均衡法则）
         float w = 420f;
-        float h = Mathf.Min(500f, UiTheme.VH - 130f);
-        var rect = new Rect(UiTheme.VW - w - UiTheme.RightMargin, _hudBottom + 16f, w, h); // 动态挂 HUD 下方
+        float h = Mathf.Min(500f, UiTheme.VH - 80f);
+        var rect = new Rect((UiTheme.VW - w) / 2f, (UiTheme.VH - h) / 2f, w, h); // 屏幕居中
 
         GUILayout.BeginArea(rect, UiTheme.Panel);
         UiTheme.Wash(rect);

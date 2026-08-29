@@ -88,8 +88,12 @@ public class BuildingPanel : MonoBehaviour
         }
 
         UiTheme.BeginScale();
-        // v2 panel_main 9-slice（border 78+padding 96 由 UiTheme.Panel 自带），外尺寸 420×500
-        var areaRect = new Rect(16, 16, 420, Mathf.Min(500f, UiTheme.VH - 60f));
+        // v2 panel_main 9-slice（border 78+padding 96 由 UiTheme.Panel 自带）
+        // HUD 均衡法则（2026-08-29 用户定则）：AI 建造=游戏核心功能→底部中央功能坞位
+        //（技能栏位），Tab 从底部长出；左上让给游戏状态 HUD。
+        float w = 420f;
+        float h = Mathf.Min(500f, UiTheme.VH - 40f);
+        var areaRect = new Rect((UiTheme.VW - w) / 2f, UiTheme.VH - h - 16f, w, h); // 底部中央
         GUILayout.BeginArea(areaRect, UiTheme.Panel);
         UiTheme.Wash(areaRect);
 
