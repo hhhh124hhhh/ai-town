@@ -862,6 +862,8 @@ public class CommissionSystem : MonoBehaviour
         if (_state?.active != null)
         {
             var a = _state.active;
+            // 对话接单=知情（NPC 已在对话里交代委托详情），箭头引导时序直接放行
+            _panelOpenedAtLeastOnce = true;
             DialogSystem.Instance?.AddSystemLine(
                 $"【{npc.npcName}】那就拜托你了——「{a.title}」：{a.desc} 建在绿圈内（{a.zoneRadius:0} 米），建完按 [C] 提交验收就行。");
         }
@@ -1121,7 +1123,9 @@ public class CommissionSystem : MonoBehaviour
         lr.useWorldSpace = true;
         lr.widthMultiplier = 0.35f;
         lr.positionCount = 65;
-        lr.material = RuntimeFxMat.Make(new Color(0.25f, 1f, 0.45f, 0.95f)); // URP shader（Deferred 判例）
+        lr.material = RuntimeFxMat.Make(Color.white); // 材质用白色，颜色由 startColor/endColor 控制
+        lr.startColor = new Color(0.25f, 1f, 0.45f, 0.95f); // 绿色圈线
+        lr.endColor = new Color(0.25f, 1f, 0.45f, 0.95f);
         WriteRingPoints(lr, center, radius);
 
         // 地面圆盘：验收区域整块淡绿（y=0.05 垫在路网 0.035 之上防闪面）
@@ -1130,7 +1134,7 @@ public class CommissionSystem : MonoBehaviour
         var mf = diskGo.AddComponent<MeshFilter>();
         mf.sharedMesh = BuildDiskMesh(radius);
         var mr = diskGo.AddComponent<MeshRenderer>();
-        mr.material = RuntimeFxMat.Make(new Color(0.25f, 1f, 0.45f, 0.16f));
+        mr.material = RuntimeFxMat.Make(new Color(0.25f, 1f, 0.45f, 0.16f)); // 淡绿圆盘
         diskGo.transform.position = new Vector3(center.x, 0.05f, center.y);
     }
 
