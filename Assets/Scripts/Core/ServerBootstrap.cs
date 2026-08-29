@@ -151,14 +151,16 @@ public static class ServerBootstrap
         };
     }
 
-    /// <summary>server 目录探测：编辑器=Assets 上两级；打包=exe 旁或 StreamingAssets 内。</summary>
+    /// <summary>server 目录探测：编辑器=Assets 同级 server/（2026-08-29 server 并入
+    /// 仓库内）+ 旧布局（Assets 上两级，兼容旧检出版本）；打包=exe 旁或 StreamingAssets 内。</summary>
     private static string FindServerDir()
     {
         string dataPath = UnityEngine.Application.dataPath;
         string[] candidates =
         {
-            Path.GetFullPath(Path.Combine(dataPath, "..", "..", "server")),
-            Path.GetFullPath(Path.Combine(dataPath, "..", "server")),
+            Path.GetFullPath(Path.Combine(dataPath, "server")),                    // 新：Assets/server
+            Path.GetFullPath(Path.Combine(dataPath, "..", "server")),             // 新：项目根/server
+            Path.GetFullPath(Path.Combine(dataPath, "..", "..", "server")),       // 旧：工作区根/server
             Path.GetFullPath(Path.Combine(dataPath, "..", "StreamingAssets", "server")),
             Path.GetFullPath(Path.Combine(dataPath, "..", "..", "..", "server")),
         };

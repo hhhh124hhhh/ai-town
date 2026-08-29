@@ -311,7 +311,7 @@ public class CommissionSystem : MonoBehaviour
     /// 委托/HUD 依赖本地 Python 服务；建造（Tab）离线可用，此条只指路不影响主演示。</summary>
     private static void DrawOfflineHint()
     {
-        string txt = "委托服务未连接——双击 server/start_server.bat 后重开 C 面板";
+        string txt = "委托服务未连接——双击 ai-town/server/start_server.bat 后重开 C 面板";
         var st = UiTheme.Hint;
         var measure = new GUIStyle(st) { wordWrap = false };
         var s = measure.CalcSize(new GUIContent(txt));
