@@ -547,22 +547,24 @@ public class CinematicIntro : MonoBehaviour
             ? "镇志官正在构思" + new string('.', Mathf.FloorToInt(Time.unscaledTime * 2.5f) % 3 + 1)
             : _line.Substring(0, Mathf.Min(_typedChars, _line.Length));
 
-        var style = new GUIStyle(UiTheme.Text(24)) { wordWrap = false };
+        var style = new GUIStyle(UiTheme.Text(26)) { wordWrap = false };
         var size = style.CalcSize(new GUIContent(main));
-        float w = Mathf.Max(260f, size.x + 72f);
-        float h = Mathf.Max(66f, size.y + 30f);
+        float w = Mathf.Max(280f, size.x + 88f);
+        float h = Mathf.Max(76f, size.y + 40f);
         var rect = new Rect(vw / 2f - w / 2f + shakeX, cy - h / 2f + slide + shakeY, w, h);
 
-        UiTheme.Wash(rect, 0.96f); // 宣纸条幅（素材缺失自动回退纯色纸）
+        // 宣纸底：直接在 rect 位置画（UiTheme.Wash 内部从 (0,0) 画，只适用于 BeginArea 内——
+        // 裸调会把纸画到屏幕左上角，文字留在原地裸压背景，即截图里的"孤儿米色块+低对比文字"）
         var prev = GUI.color;
-        GUI.color = new Color(0.22f, 0.19f, 0.15f, 0.5f); // 细墨边
-        var tex = Texture2D.whiteTexture;
-        GUI.DrawTexture(new Rect(rect.x, rect.y, rect.width, 2f), tex);
-        GUI.DrawTexture(new Rect(rect.x, rect.yMax - 2f, rect.width, 2f), tex);
-        GUI.DrawTexture(new Rect(rect.x, rect.y, 2f, rect.height), tex);
-        GUI.DrawTexture(new Rect(rect.xMax - 2f, rect.y, 2f, rect.height), tex);
+        GUI.color = new Color(0.94f, 0.89f, 0.80f, 0.97f); // 宣纸近实底
+        GUI.DrawTexture(rect, Texture2D.whiteTexture);
+        GUI.color = new Color(0.22f, 0.19f, 0.15f, 0.55f); // 细墨边
+        GUI.DrawTexture(new Rect(rect.x, rect.y, rect.width, 2f), Texture2D.whiteTexture);
+        GUI.DrawTexture(new Rect(rect.x, rect.yMax - 2f, rect.width, 2f), Texture2D.whiteTexture);
+        GUI.DrawTexture(new Rect(rect.x, rect.y, 2f, rect.height), Texture2D.whiteTexture);
+        GUI.DrawTexture(new Rect(rect.xMax - 2f, rect.y, 2f, rect.height), Texture2D.whiteTexture);
         GUI.color = prev;
-        GUI.Label(new Rect(rect.x + 36f, rect.y, rect.width - 72f, rect.height), main, style);
+        GUI.Label(new Rect(rect.x + 44f, rect.y, rect.width - 88f, rect.height), main, style);
 
         // 打完：印章弹出 + AI 现写署名
         if (!waiting && _typedChars >= _line.Length && _typedDoneTime > 0f)
@@ -571,8 +573,15 @@ public class CinematicIntro : MonoBehaviour
             string cap = _lineFromAI
                 ? $"本句由 AI 现场书写 · 耗时 {_introWaitSeconds:0.0} 秒"
                 : "本地备稿 · 服务连上后由 AI 现场书写";
-            var capStyle = new GUIStyle(UiTheme.Text(14)) { alignment = TextAnchor.MiddleCenter };
-            GUI.Label(new Rect(vw / 2f - 320f, rect.yMax + 10f, 640f, 26f), cap, capStyle);
+            // 署名行同款小纸条：淡墨字坐素地（与主信笺成一组，亲密性原则）
+            var capStyle = new GUIStyle(UiTheme.Text(15)) { alignment = TextAnchor.MiddleCenter };
+            var capSize = capStyle.CalcSize(new GUIContent(cap));
+            float capW = Mathf.Max(300f, capSize.x + 48f);
+            var capRect = new Rect(vw / 2f - capW / 2f, rect.yMax + 8f, capW, 30f);
+            GUI.color = new Color(0.94f, 0.89f, 0.80f, 0.92f);
+            GUI.DrawTexture(capRect, Texture2D.whiteTexture);
+            GUI.color = prev;
+            GUI.Label(capRect, cap, capStyle);
         }
         UiTheme.EndScale();
     }
