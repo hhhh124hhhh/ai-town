@@ -191,7 +191,27 @@ public class CommissionSystem : MonoBehaviour
             _levelShown = _state.level;
             _levelUpTo = 0;
         }
+
+        // 到圈提示（2026-08-29 用户"没一个是能放的"——玩家把氛围烛光当落点标记，
+        // 不知道"能放"的入口是 Tab 生成）：首次进绿圈明确告知放置流程，30s 冷却防刷
+        if (_state?.active != null && _zoneGuideCenter.HasValue
+            && Time.unscaledTime >= _zoneHintCooldownUntil
+            && !CinematicIntro.IsCinematic)
+        {
+            var player = GameObject.Find("Player");
+            if (player != null)
+            {
+                var pp = new Vector2(player.transform.position.x, player.transform.position.z);
+                if (Vector2.Distance(pp, _zoneGuideCenter.Value) <= 3f)
+                {
+                    ShowTopHint("已到绿圈——按 [Tab] 说出建筑，落点选在圈内，建完按 [C] 验收", 7f);
+                    _zoneHintCooldownUntil = Time.unscaledTime + 30f;
+                }
+            }
+        }
     }
+
+    private float _zoneHintCooldownUntil;
 
     /// <summary>BuildingPanel 每次生成建筑后登记，验收时统一上报（服务端取最优匹配）。</summary>
     public void RegisterBuild(string name, string description, string template, int blockCount, Transform root)

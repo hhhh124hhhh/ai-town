@@ -1,28 +1,28 @@
 using System.Collections.Generic;
 using UnityEngine;
-#if ENABLE_INPUT_SYSTEM
-using UnityEngine.InputSystem;
-#endif
 
 /// <summary>
 /// 委托绿圈引导箭头（2026-08-29 用户"绿圈有引导箭头吗"——HUD 文字方位要脑内换算，
-/// 世界内箭头才是"识别优于回忆"）：墨色纸箭头悬浮玩家前方 3m/高 2m，始终水平指向
+/// 世界内箭头才是"识别优于回忆"）：墨色纸箭头悬浮玩家前方 3m/高 2.2m，始终水平指向
 /// 绿圈圆心，随玩家移动/转向实时刷新；进圈 2.5m 内自动隐藏（到达即撤，不遮视线）。
-/// 纯程序化 Mesh（三角箭头+尾杆，淡墨 0.85），无素材依赖；委托重建/清空时随
-/// CommissionSystem 的 _zoneGuideCenter 生死。场景无关自建。
+/// 十字翼程序化 Mesh（水平+垂直双面交叉，任意俯仰角至少一面正对视线——单张水平薄片
+/// 会被近水平的玩家视线侧对成一条线），淡墨 0.85 无素材依赖。
+///
+/// 生存铁律：本物体永不 SetActive(false)——SetActive 会禁用 LateUpdate，
+/// 从此无人再把它激活（2026-08-29 "箭头从未出现"根因：Bootstrap 时禁用即死锁）。
+/// 显隐一律走 _mr.enabled。
 /// </summary>
 public class CommissionArrow : MonoBehaviour
 {
     private static CommissionArrow _instance;
     private Transform _player;
-    private MeshFilter _mf;
     private MeshRenderer _mr;
     private Vector2? _target;
-    private Camera _cam;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Bootstrap()
     {
+        if (_instance != null) return;
         var go = new GameObject("_CommissionArrow");
         _instance = go.AddComponent<CommissionArrow>();
         var mf = go.AddComponent<MeshFilter>();
@@ -34,14 +34,12 @@ public class CommissionArrow : MonoBehaviour
             mr.material = new Material(shader);
             mr.material.color = new Color(0.16f, 0.15f, 0.13f, 0.85f); // 淡墨（纸墨系统）
         }
-        _instance._mf = mf;
         _instance._mr = mr;
-        go.SetActive(false); // 无目标时隐形，不占渲染
+        mr.enabled = false; // 初始隐藏（渲染级，LateUpdate 保持存活）
     }
 
     /// <summary>十字翼箭头：同一箭形在水平面（XZ）+ 垂直面（XY）各一份、同指 +Z。
-    /// 玩家视线接近水平，单张水平薄片会被侧对成一条线（2026-08-29 "箭头看不到"根因），
-    /// 交叉翼保证任意俯仰角至少一面正对视线。</summary>
+    /// 玩家视线接近水平，单张水平薄片会被侧对成一条线，交叉翼保证任意俯仰角可见。</summary>
     private static Mesh BuildArrowMesh()
     {
         var verts = new List<Vector3>(14);
@@ -77,41 +75,36 @@ public class CommissionArrow : MonoBehaviour
         if (_player == null)
         {
             var p = GameObject.Find("Player");
-            if (p == null) return;
+            if (p == null) { if (_mr != null) _mr.enabled = false; return; }
             _player = p.transform;
         }
-        if (_cam == null) _cam = Camera.main;
 
-        bool show = _target.HasValue && _player != null
+        bool show = _target.HasValue
                     && !CinematicIntro.IsCinematic && !CinematicIntro.InputCooldown
                     && DialogSystem.Instance == null && !BuildingPlacement.Active;
         if (!show)
         {
-            if (gameObject.activeSelf) gameObject.SetActive(false);
+            if (_mr != null && _mr.enabled) _mr.enabled = false;
             return;
         }
 
-        // 进圈即撤（到达后箭头挡视线反而碍事；HUD 的"已在绿圈内"接管）
         var pp = new Vector2(_player.position.x, _player.position.z);
+        // 进圈即撤（到达后箭头挡视线反而碍事；HUD 的"已在绿圈内"接管）
         if (Vector2.Distance(pp, _target.Value) < 2.5f)
         {
-            if (gameObject.activeSelf) gameObject.SetActive(false);
+            if (_mr != null && _mr.enabled) _mr.enabled = false;
             return;
         }
-
-        if (!gameObject.activeSelf) gameObject.SetActive(true);
 
         // 悬浮玩家前方 3m、高 2.2m，水平指向目标；轻微上下浮动（呼吸感，识别度高于静止）
         Vector3 dir3 = new Vector3(_target.Value.x - pp.x, 0f, _target.Value.y - pp.y);
-        if (dir3.sqrMagnitude < 0.01f) return;
+        if (dir3.sqrMagnitude < 0.01f) { if (_mr != null) _mr.enabled = false; return; }
         dir3.Normalize();
         float bob = Mathf.Sin(Time.unscaledTime * 2.2f) * 0.08f;
         transform.position = new Vector3(
             _player.position.x + dir3.x * 3f, 2.2f + bob, _player.position.z + dir3.z * 3f);
         transform.rotation = Quaternion.LookRotation(dir3, Vector3.up);
         transform.localScale = Vector3.one * 1.4f;
-
-        // 朝向相机的面可见性兜底：单面 Mesh 背对相机时会隐形，用双面材质更稳——
-        // 这里直接按相机在箭头哪一侧翻转法线不可行（Sprites/Default 已双面），跳过
+        if (_mr != null && !_mr.enabled) _mr.enabled = true;
     }
 }
