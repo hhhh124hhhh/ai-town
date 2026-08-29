@@ -51,9 +51,13 @@ public class BuildingPanel : MonoBehaviour
         if (CinematicIntro.IsCinematic || CinematicIntro.InputCooldown) return; // 演出期间不响应
 #if ENABLE_INPUT_SYSTEM
         var kb = UnityEngine.InputSystem.Keyboard.current;
-        // Tab 永远可切换面板（含放置模式——打字焦点残留/放置中都算唯一逃生口；隐藏时一并释放焦点）
-        // v2 互斥：Tab 切换走 UiPanelLayout 协调器（开建筑自动关委托；对话打开时 Tab 先关对话）
-        if (kb != null && kb.tabKey.wasPressedThisFrame)
+        // 打字期间的 Enter/Tab 静默（2026-08-29"输入触发游戏键"终修）：
+        // ①文本框聚焦时 Tab 不切面板（IME 候选/打字习惯的 Tab 都不该关面板；点框外/Esc
+        //   失焦后 Tab 恢复逃生口功能）②Enter 上屏那一帧（文本刚变化 0.4s 内）不触发生成——
+        //   半句拼音不再被当生成指令发出去；打完停顿后按 Enter 才是真提交
+        bool fieldFocused = FieldFocused;
+        if (kb != null && kb.tabKey.wasPressedThisFrame
+            && !fieldFocused && !UiTextFocus.UguiFieldFocused)
         {
             if (DialogSystem.Instance != null) { DialogSystem.Instance.CloseByUser(); }
             else
@@ -63,16 +67,31 @@ public class BuildingPanel : MonoBehaviour
             }
             if (!_visible) UiTextFocus.Clear();
         }
+        // 文本变化计时（IME 上屏启发式：上屏瞬间 _input 变化）
+        if (_input != _lastInput)
+        {
+            _lastInput = _input;
+            _lastInputChangeAt = Time.realtimeSinceStartup;
+        }
         if (BuildingPlacement.Active) return; // 放置期间其余输入归放置模式（回车不再触发生成）
         // 回车=生成（便携手感 + 远程测试钩子：桥 manage_input 可触发）
+        // 门控：文本框聚焦且文本刚变化（<0.4s）→ 视为 IME 上屏确认键，吞掉
         // 对话框打开时让位给 DialogSystem，避免一次回车同时触发两处
         if (kb != null && kb.enterKey.wasPressedThisFrame && !_busy && _visible
+            && (!fieldFocused || Time.realtimeSinceStartup - _lastInputChangeAt > 0.4f)
             && DialogSystem.Instance == null)
         {
             StartCoroutine(GenerateCo(_input, null));
         }
 #endif
     }
+
+    private string _lastInput = "";
+    private float _lastInputChangeAt = -10f;
+
+    /// <summary>建筑面板输入框当前是否持有命名焦点（GUI.GetNameOfFocusedControl 精确判
+    /// 文本框——按钮点击的 keyboardControl 残留不算，避免按钮焦点陷阱锁死 Tab）。</summary>
+    public static bool FieldFocused => GUI.GetNameOfFocusedControl() == InputControlName;
 
     private Rect _inputFieldRect; // 输入框在面板内区域（点击框外释放键盘焦点用）
     private bool _inputFocused;   // 上一帧键盘焦点是否在本输入框
@@ -146,6 +165,7 @@ public class BuildingPanel : MonoBehaviour
         // ── 主操作：最大最高的朱红按钮（视觉权重第一）──
         if (GUILayout.Button("生 成 建 筑", UiTheme.BtnPrimary, GUILayout.Height(54f)))
         {
+            UiTextFocus.Clear(); // 按钮抢 keyboardControl，不清则 F/E/X 被 IsTyping 锁死
             AudioManager.Play("SFX_Click");
             StartCoroutine(GenerateCo(_input, null));
         }
@@ -159,6 +179,7 @@ public class BuildingPanel : MonoBehaviour
             if (GUILayout.Button(Tabs[t].tab, on ? UiTheme.BtnPrimary : UiTheme.Btn, GUILayout.Height(38f),
                 GUILayout.ExpandWidth(true)))
             {
+                UiTextFocus.Clear(); // 按钮焦点残留清理
                 _activeTab = t;
                 AudioManager.Play("SFX_Click");
             }
@@ -185,6 +206,7 @@ public class BuildingPanel : MonoBehaviour
                     unlocked ? UiTheme.BtnGrid : UiTheme.BtnLocked, GUILayout.Height(46f),
                     GUILayout.ExpandWidth(true)))
                 {
+                    UiTextFocus.Clear(); // 按钮焦点残留清理
                     selected = idx;
                     AudioManager.Play("SFX_Click");
                 }
@@ -201,6 +223,7 @@ public class BuildingPanel : MonoBehaviour
         GUILayout.Space(6f);
         if (GUILayout.Button("清除全部建筑", UiTheme.Btn, GUILayout.Height(44f)))
         {
+            UiTextFocus.Clear(); // 按钮焦点残留清理
             AudioManager.Play("SFX_Click");
             if (BuildingManager.Instance != null)
             {

@@ -41,6 +41,7 @@ public class DialogSystem : MonoBehaviour
     private bool _focusNextUgui;
     private bool _resubmitFocus;
     private static Font _cjkFont;    // OS 字体资产缓存（每次对话重建 UI，字体不随物体销毁，必须复用防泄漏）
+    private float _lastInputChangeAt = -10f; // 文本变化时间戳（IME 上屏守卫用）
 
     /// <summary>输入框当前文本（uGUI 为唯一真源）。</summary>
     private string InputText => _field != null ? _field.text : "";
@@ -138,7 +139,10 @@ public class DialogSystem : MonoBehaviour
 #if ENABLE_INPUT_SYSTEM
         var kb = Keyboard.current;
         if (kb == null) return;
-        if (kb.escapeKey.wasPressedThisFrame && Target != null)
+        // Esc：uGUI 输入框聚焦中不关对话（Esc 先服务 IME 取消组合/失焦——打拼音取消时
+        // 整窗消失+文字丢失是"打字触发游戏键"的重灾区，2026-08-29 修复）。
+        // 用 UguiFieldFocused 而非 IsTyping：后者含按钮焦点残留，会误锁 Esc
+        if (kb.escapeKey.wasPressedThisFrame && Target != null && !UiTextFocus.UguiFieldFocused)
         {
             Close();
             return;
@@ -278,6 +282,9 @@ public class DialogSystem : MonoBehaviour
 
     private void SendFromField()
     {
+        // IME 组合期守卫（2026-08-29 终修）：上屏确认的 Enter 会触发 onSubmit——
+        // 文本刚变化 0.5s 内的提交视为"IME 上屏确认键"，不发半句话出去
+        if (Time.realtimeSinceStartup - _lastInputChangeAt < 0.5f) return;
         string msg = InputText.Trim();
         if (_waitingReply || string.IsNullOrEmpty(msg)) return;
         _field.text = "";
@@ -381,6 +388,7 @@ public class DialogSystem : MonoBehaviour
         _field.placeholder = ph;
         _field.targetGraphic = img;
         _field.onSubmit.AddListener(_ => SendFromField());
+        _field.onValueChanged.AddListener(_ => _lastInputChangeAt = Time.realtimeSinceStartup);
 
         // 发送按钮：朱红底纸字 + 墨线描边，与 BtnPrimary 同语言
         var sendGo = new GameObject("Send");
