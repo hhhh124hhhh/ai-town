@@ -42,6 +42,12 @@ public class NPCController : MonoBehaviour
     /// <summary>当前是否与玩家对话中（DialogSystem 打开着）。</summary>
     public bool InConversation { get; set; }
 
+    /// <summary>玩家是否在交互范围内（NpcWander 游走让位用）。</summary>
+    public bool PlayerNearby => _playerNearby;
+
+    /// <summary>玩家 Transform（Wander 避让用；未找到时 null）。</summary>
+    public Transform PlayerTransform => _player;
+
     private void Awake()
     {
         _player = GameObject.Find("Player")?.transform;
