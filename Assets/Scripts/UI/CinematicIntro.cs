@@ -547,10 +547,18 @@ public class CinematicIntro : MonoBehaviour
             ? "镇志官正在构思" + new string('.', Mathf.FloorToInt(Time.unscaledTime * 2.5f) % 3 + 1)
             : _line.Substring(0, Mathf.Min(_typedChars, _line.Length));
 
-        var style = new GUIStyle(UiTheme.Text(26)) { wordWrap = false };
-        var size = style.CalcSize(new GUIContent(main));
-        float w = Mathf.Max(280f, size.x + 88f);
-        float h = Mathf.Max(76f, size.y + 40f);
+        // 排版美学：纸宽按"整句"预算固定（打字过程中纸不缩放），文字在纸内
+        // 双重居中（TextAnchor.MiddleCenter）——打字期文字从纸中心向两侧生长，
+        // 不会前期挤左侧、右侧留大空白（光学居中 + 排版稳定性）
+        var style = new GUIStyle(UiTheme.Text(26))
+        {
+            wordWrap = false,
+            alignment = TextAnchor.MiddleCenter,
+        };
+        string fullText = waiting ? "镇志官正在构思..." : _line;
+        var fullSize = style.CalcSize(new GUIContent(fullText));
+        float w = Mathf.Max(300f, fullSize.x + 96f);   // 左右各 48 padding（≥1.5 字高）
+        float h = Mathf.Max(76f, fullSize.y + 40f);
         var rect = new Rect(vw / 2f - w / 2f + shakeX, cy - h / 2f + slide + shakeY, w, h);
 
         // 宣纸底：直接在 rect 位置画（UiTheme.Wash 内部从 (0,0) 画，只适用于 BeginArea 内——
@@ -564,7 +572,8 @@ public class CinematicIntro : MonoBehaviour
         GUI.DrawTexture(new Rect(rect.x, rect.y, 2f, rect.height), Texture2D.whiteTexture);
         GUI.DrawTexture(new Rect(rect.xMax - 2f, rect.y, 2f, rect.height), Texture2D.whiteTexture);
         GUI.color = prev;
-        GUI.Label(new Rect(rect.x + 44f, rect.y, rect.width - 88f, rect.height), main, style);
+        // 文字画满整个纸区，由 style 的 MiddleCenter 完成居中（不再手动偏移 44px）
+        GUI.Label(rect, main, style);
 
         // 打完：印章弹出 + AI 现写署名
         if (!waiting && _typedChars >= _line.Length && _typedDoneTime > 0f)
