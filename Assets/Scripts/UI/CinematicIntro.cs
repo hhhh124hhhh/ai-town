@@ -493,7 +493,7 @@ public class CinematicIntro : MonoBehaviour
         {
             var hint = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 13,
+                fontSize = UiTheme.SizeBody,
                 alignment = TextAnchor.UpperRight,
                 font = UiTheme.KaiFont,
                 normal = { textColor = new Color(1f, 1f, 1f, 0.55f) },
@@ -550,7 +550,7 @@ public class CinematicIntro : MonoBehaviour
         // 排版美学：纸宽按"整句"预算固定（打字过程中纸不缩放），文字在纸内
         // 双重居中（TextAnchor.MiddleCenter）——打字期文字从纸中心向两侧生长，
         // 不会前期挤左侧、右侧留大空白（光学居中 + 排版稳定性）
-        var style = new GUIStyle(UiTheme.Text(26))
+        var style = new GUIStyle(UiTheme.Text(UiTheme.SizeDisplay))
         {
             wordWrap = false,
             alignment = TextAnchor.MiddleCenter,
@@ -583,7 +583,7 @@ public class CinematicIntro : MonoBehaviour
                 ? $"本句由 AI 现场书写 · 耗时 {_introWaitSeconds:0.0} 秒"
                 : "本地备稿 · 服务连上后由 AI 现场书写";
             // 署名行同款小纸条：淡墨字坐素地（与主信笺成一组，亲密性原则）
-            var capStyle = new GUIStyle(UiTheme.Text(15)) { alignment = TextAnchor.MiddleCenter };
+            var capStyle = new GUIStyle(UiTheme.Text(UiTheme.SizeBody)) { alignment = TextAnchor.MiddleCenter };
             var capSize = capStyle.CalcSize(new GUIContent(cap));
             float capW = Mathf.Max(300f, capSize.x + 48f);
             var capRect = new Rect(vw / 2f - capW / 2f, rect.yMax + 8f, capW, 30f);
@@ -618,7 +618,7 @@ public class CinematicIntro : MonoBehaviour
 
         var sealStyle = new GUIStyle(GUI.skin.label)
         {
-            fontSize = 17,
+            fontSize = UiTheme.SizeEmph,
             fontStyle = FontStyle.Bold,
             alignment = TextAnchor.MiddleCenter,
             normal = { textColor = new Color32(0xF5, 0xEF, 0xE2, 0xFF) }, // 宣纸白

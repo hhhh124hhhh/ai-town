@@ -82,12 +82,16 @@ public class BuildingPanel : MonoBehaviour
         }
 
         UiTheme.BeginScale();
-        var areaRect = new Rect(16, 16, 440, 420); // 440 宽 = 4×80 按钮 + padding 72 + 间距
+        // v2 panel_main 9-slice（border 78+padding 96 由 UiTheme.Panel 自带），外尺寸 480×560
+        var areaRect = new Rect(16, 16, 480, Mathf.Min(560f, UiTheme.VH - 60f));
         GUILayout.BeginArea(areaRect, UiTheme.Panel);
         UiTheme.Wash(areaRect);
-        GUILayout.Label("<b>AI 建筑生成</b>  <color=#5A5042>(Tab 隐藏)</color>", UiTheme.Title);
 
-        _input = GUILayout.TextField(_input, UiTheme.Field);
+        // ── 头部行：标题（层级：字重+颜色 > 字号）──
+        GUILayout.Label("AI 建筑生成  <color=#5A5042>(Tab 隐藏)</color>", UiTheme.Title);
+        GUILayout.Space(8f);
+
+        _input = GUILayout.TextField(_input, UiTheme.Field, GUILayout.Height(36f));
         _inputFieldRect = GUILayoutUtility.GetLastRect();
         _inputFocused = GUIUtility.keyboardControl != 0;
 
@@ -97,14 +101,16 @@ public class BuildingPanel : MonoBehaviour
             UiTextFocus.Clear();
 
         GUI.enabled = !_busy;
-        if (GUILayout.Button("生成（自然语言）", UiTheme.BtnPrimary))
+        if (GUILayout.Button("生成（自然语言）", UiTheme.BtnPrimary, GUILayout.Height(40f)))
         {
             StartCoroutine(GenerateCo(_input, null));
         }
 
-        GUILayout.Space(4);
+        GUILayout.Space(16f);
         GUILayout.Label("图纸快速生成：", UiTheme.Hint);
-        _scroll = GUILayout.BeginScrollView(_scroll, GUILayout.Height(110));
+        GUILayout.Space(8f);
+        _scroll = GUILayout.BeginScrollView(_scroll, GUIStyle.none, GUIStyle.none,
+            GUILayout.Height(224f));
         int columns = 4;
         int rows = Mathf.CeilToInt(Templates.Length / (float)columns);
         int selected = -1;
@@ -117,13 +123,16 @@ public class BuildingPanel : MonoBehaviour
                 if (idx >= Templates.Length) break;
                 bool unlocked = CommissionSystem.IsTemplateUnlocked(Templates[idx].id);
                 GUI.enabled = !_busy && unlocked;
-                if (GUILayout.Button(unlocked ? Templates[idx].zh : "🔒" + Templates[idx].zh, UiTheme.Btn, GUILayout.Width(80)))
+                // 锁定模板灰显：淡墨字+🔒前缀（层级靠颜色区分，不加字号档）
+                if (GUILayout.Button(unlocked ? Templates[idx].zh : "🔒" + Templates[idx].zh,
+                    unlocked ? UiTheme.Btn : UiTheme.BtnLocked, GUILayout.Height(36f)))
                 {
                     selected = idx;
                     AudioManager.Play("SFX_Click");
                 }
             }
             GUILayout.EndHorizontal();
+            GUILayout.Space(4f);
         }
         GUILayout.EndScrollView();
         GUI.enabled = !_busy;
@@ -132,7 +141,7 @@ public class BuildingPanel : MonoBehaviour
             StartCoroutine(GenerateCo(null, Templates[selected].id));
         }
 
-        if (GUILayout.Button("清除全部建筑", UiTheme.Btn))
+        if (GUILayout.Button("清除全部建筑", UiTheme.Btn, GUILayout.Height(36f)))
         {
             AudioManager.Play("SFX_Click");
             if (BuildingManager.Instance != null)
@@ -146,6 +155,7 @@ public class BuildingPanel : MonoBehaviour
 
         if (!string.IsNullOrEmpty(_status))
         {
+            GUILayout.Space(8f);
             GUILayout.Label(_status, UiTheme.Body);
         }
         GUILayout.EndArea();

@@ -205,40 +205,43 @@ public class DialogSystem : MonoBehaviour
 
         UiTheme.BeginScale();
         float w = Mathf.Min(UiTheme.VW * 0.62f, 720f);
-        // 高度构成（虚拟坐标）：Panel 上下 padding(36×2)+标题(~34 含 margin)+Space4
-        // +历史区 120+快捷按钮(~40 含 margin)+Space6+输入行 36≈312，取 340 留余量。
-        // 不够时 IMGUI 溢出不裁剪，输入行会被挤出面板底框掉到屏幕外（历史 bug 根因）
-        float h = 340f;
+        // 高度构成（虚拟坐标，v2 panel_tall border140+padding154 由 PanelTall 自带）：
+        // 标题(~34)+Space8+历史区 136+快捷按钮(36+Space8)+Space8+输入行 40 ≈ 270 内容
+        // + 上下 padding 154×2（9-slice 内缩）→ 面板总高 560 取整；不够时 IMGUI 溢出
+        // 不裁剪，输入行会被挤出面板底框掉到屏幕外（历史 bug 根因），宁大勿小。
+        float h = 560f;
         var rect = new Rect((UiTheme.VW - w) / 2f, UiTheme.VH - h - 28f, w, h);
 
-        GUILayout.BeginArea(rect, UiTheme.Panel);
+        GUILayout.BeginArea(rect, UiTheme.PanelTall);
         UiTheme.Wash(rect);
 
-        // ── 行 1：标题 ──
-        GUILayout.Label($"<b>与 {Target.npcName}（{Target.roleName}）对话</b>  <color=#5A5042>[Esc 关闭]</color>", UiTheme.Title);
-        GUILayout.Space(4);
+        // ── 行 1：标题（说话人识别靠粗体名+淡墨角色，不加字号档）──
+        GUILayout.Label($"与 <b>{Target.npcName}</b>（{Target.roleName}）对话  <color=#5A5042>[Esc 关闭]</color>", UiTheme.Title);
+        GUILayout.Space(8);
 
         // ── 行 2：历史区（固定高度。不能 ExpandHeight：GUILayout 滚动区不锁高时
         //    最小高度=内容高度，对话一长就把按钮/输入行挤出面板底框（uGUI 输入行
         //    随 reserved 掉出面板）→"输入框不见了"。固定高+滚动+自动到底才是聊天条正解。
-        //    滚动条隐藏——默认黑胶囊与宣纸风冲突，滚轮+自动到底已覆盖需求）──
-        _scroll = GUILayout.BeginScrollView(_scroll, GUIStyle.none, GUIStyle.none, GUILayout.Height(120));
+        //    滚动条隐藏——默认黑胶囊与宣纸风冲突，滚轮+自动到底已覆盖需求）
+        //    说话人前缀色：【名】朱红=NPC、名=墨粗=玩家（识别优于回忆）──
+        _scroll = GUILayout.BeginScrollView(_scroll, GUIStyle.none, GUIStyle.none, GUILayout.Height(136));
         foreach (string line in _history)
         {
-            GUILayout.Label(line, UiTheme.Text(15));
+            GUILayout.Label(line, UiTheme.Text(UiTheme.SizeBody));
+            GUILayout.Space(8f);
         }
         if (_waitingReply)
         {
-            GUILayout.Label("<i>……正在思考</i>", new GUIStyle(UiTheme.Text(15)) { normal = { textColor = UiTheme.InkSoft } });
+            GUILayout.Label("<i>……正在思考</i>", UiTheme.Hint);
         }
-        GUILayout.Space(2);
         GUILayout.EndScrollView();
 
-        // ── 行 3：快捷问题三个按钮并排 ──
+        // ── 行 3：快捷问题三个按钮并排（32 高+组内自然间距）──
+        GUILayout.Space(8f);
         GUILayout.BeginHorizontal();
         foreach (var (label, question) in _quickAsks)
         {
-            if (GUILayout.Button(label, UiTheme.Btn, GUILayout.Height(32)) && !_waitingReply)
+            if (GUILayout.Button(label, UiTheme.Btn, GUILayout.Height(36f)) && !_waitingReply)
             {
                 StartCoroutine(SendCo(question));
             }
@@ -246,8 +249,8 @@ public class DialogSystem : MonoBehaviour
         GUILayout.EndHorizontal();
 
         // ── 行 4：uGUI 输入行占位（真输入框是 uGUI Overlay，按此矩形对位）──
-        GUILayout.Space(6);
-        var reserved = GUILayoutUtility.GetRect(0f, 36f, GUILayout.ExpandWidth(true));
+        GUILayout.Space(8f);
+        var reserved = GUILayoutUtility.GetRect(0f, 40f, GUILayout.ExpandWidth(true));
 
         GUILayout.EndArea();
         UiTheme.EndScale();

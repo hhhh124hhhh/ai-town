@@ -185,11 +185,11 @@ public class NPCController : MonoBehaviour
         float x = screen.x / UiTheme.Scale;
         float y = UiTheme.VH - screen.y / UiTheme.Scale; // GUI 坐标系 y 向下（缩放坐标系）
 
-        // 名牌（常显，黑描边保证亮背景下可读）
+        // 名牌（常显，黑描边保证亮背景下可读；字号走 1.33 档位 14）
         var labelStyle = new GUIStyle(GUI.skin.label)
         {
             alignment = TextAnchor.MiddleCenter,
-            fontSize = 15,
+            fontSize = UiTheme.SizeBody,
             richText = true,
             font = UiTheme.KaiFont,
             normal = { textColor = Color.white },
@@ -199,13 +199,13 @@ public class NPCController : MonoBehaviour
         GUI.Label(new Rect(x - 92 + 1.5f, y - 22 + 1.5f, 180, 24), label, shadowStyle);
         GUI.Label(new Rect(x - 92, y - 22, 180, 24), label, labelStyle);
 
-        // 聊天气泡（限时）
+        // 聊天气泡（限时；字号走 1.33 档位 12 弱提示档）
         if (!string.IsNullOrEmpty(_bubbleText) && Time.unscaledTime < _bubbleUntil)
         {
             var bubbleStyle = new GUIStyle(GUI.skin.box)
             {
                 alignment = TextAnchor.UpperCenter,
-                fontSize = 14,
+                fontSize = UiTheme.SizeHint,
                 wordWrap = true,
                 font = UiTheme.KaiFont,
                 normal = { textColor = new Color(1f, 1f, 0.85f) },

@@ -68,9 +68,9 @@ public class PlayerBounds : MonoBehaviour
         if (Time.unscaledTime >= _toastUntil) return;
         UiTheme.BeginScale();
         float alpha = Mathf.Clamp01((_toastUntil - Time.unscaledTime) / 0.5f);
-        var style = UiTheme.Text(15);
+        var style = UiTheme.Text(UiTheme.SizeEmph);
         var size = style.CalcSize(new GUIContent(ToastText));
-        var rect = new Rect((UiTheme.VW - size.x) * 0.5f, UiTheme.VH * 0.16f, size.x + 36f, size.y + 14f);
+        var rect = new Rect((UiTheme.VW - size.x) * 0.5f, UiTheme.VH * 0.16f, size.x + 48f, size.y + 20f);
         var prev = GUI.color;
         GUI.color = new Color(1f, 1f, 1f, alpha);
         GUI.Box(rect, ToastText, UiTheme.Card);

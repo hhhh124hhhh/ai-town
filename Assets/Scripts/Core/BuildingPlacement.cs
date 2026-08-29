@@ -675,25 +675,25 @@ public class BuildingPlacement : MonoBehaviour
 
     private void DrawHintBar()
     {
-        float w = 520f;
-        float h = 62f;
+        float w = 560f;
+        float h = 72f;
         var rect = new Rect(UiTheme.VW / 2f - w / 2f, UiTheme.VH - h - 14f, w, h);
         GUILayout.BeginArea(rect, UiTheme.Hud);
-        UiTheme.Wash(rect, 0.8f);
-        GUILayout.Label("左键 放置　·　R 旋转 90°　·　滚轮 微调　·　Ctrl+滚轮 缩放　·　右键/Esc 取消　·　X 回出生点", UiTheme.Text(13));
+        UiTheme.Wash(rect, 0.9f);
+        GUILayout.Label("左键 放置　·　R 旋转 90°　·　滚轮 微调　·　Ctrl+滚轮 缩放　·　右键/Esc 取消　·　X 回出生点", UiTheme.Text(UiTheme.SizeBody));
 
         string scaleTag = _scale != 1f ? $"　·　当前 {_scale:0.00}x" : "";
         if (!_valid)
         {
-            GUILayout.Label($"<color=#9E2B25>{_invalidReason}</color>{scaleTag}", UiTheme.Text(13));
+            GUILayout.Label($"<color=#9E2B25>{_invalidReason}</color>{scaleTag}", UiTheme.Text(UiTheme.SizeBody));
         }
         else if (!string.IsNullOrEmpty(_warn))
         {
-            GUILayout.Label($"<color=#8A5A00>{_warn}</color>{scaleTag}", UiTheme.Text(13));
+            GUILayout.Label($"<color=#8A5A00>{_warn}</color>{scaleTag}", UiTheme.Text(UiTheme.SizeBody));
         }
         else
         {
-            GUILayout.Label($"<color=#5A5042>落点可用{scaleTag}</color>", UiTheme.Text(13));
+            GUILayout.Label($"<color=#5A5042>落点可用{scaleTag}</color>", UiTheme.Text(UiTheme.SizeBody));
         }
         GUILayout.EndArea();
     }

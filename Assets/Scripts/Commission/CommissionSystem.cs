@@ -233,10 +233,16 @@ public class CommissionSystem : MonoBehaviour
 
     private float _hudBottom = 100f; // HUD 实际底边（自适应后），委托面板挂其下方
 
+    // 繁荣度等级阈值（镜像服务端 PROSPERITY_LEVELS，进度条数据源）
+    private static readonly (int threshold, string name)[] ProsperityLevels =
+    {
+        (0, "荒地聚落"), (100, "边陲小村"), (250, "热闹小镇"), (450, "繁荣市镇"), (700, "传奇之城"),
+    };
+
     private void DrawHud()
     {
-        const float Pad = 20f; // 与 UiTheme.Hud 的 padding 一致
-        var st = UiTheme.Text(13);
+        const float Pad = 20f;
+        var st = UiTheme.Text(UiTheme.SizeBody);
         var active = _state.active;
         string line1 = $"<b>★{_state.level} {_state.levelName}</b>　繁荣 {_state.prosperity}　大洋 {_state.gold}　完成 {_state.completed} 单";
         string line2 = active != null
@@ -253,66 +259,141 @@ public class CommissionSystem : MonoBehaviour
 
         var rect = new Rect(UiTheme.VW - w - UiTheme.RightMargin, 16f, w, h); // 右缘让位 Cowork 侧条(仅编辑器)
         GUILayout.BeginArea(rect, UiTheme.Hud);
-        UiTheme.Wash(rect, 0.95f); // hud_bg 贴图自带抽屉纹/铜钱装饰,0.8 压不住会透出来和文字相叠,近实底才素净
+        UiTheme.Wash(rect, 0.95f); // HUD 信息行多、v2 贴图也有纸纹，近实底才素净
         GUILayout.Label(line1, st);
         if (line2 != null) GUILayout.Label(line2, st);
         GUILayout.EndArea();
     }
 
+    /// <summary>区块头：菱形点 + 标题 + 细墨线贯通右侧（报纸栏线语言）。</summary>
+    private static void SecHeader(string title)
+    {
+        GUILayout.BeginHorizontal();
+        GUILayout.Label("◆", UiTheme.Text(UiTheme.SizeHint), GUILayout.Width(14f));
+        GUILayout.Label(title, UiTheme.SecHead);
+        var rule = GUILayoutUtility.GetRect(8f, 1f, GUILayout.ExpandWidth(true), GUILayout.Height(1f));
+        UiTheme.DrawRule(rule, 0.35f);
+        GUILayout.EndHorizontal();
+    }
+
+    /// <summary>k/v 行式信息（组内 8 间距：k 固定宽淡墨，v 正文）。</summary>
+    private static void KeyValueRow(string key, string valueRichText)
+    {
+        GUILayout.BeginHorizontal();
+        GUILayout.Label(key, UiTheme.Hint, GUILayout.Width(72f));
+        GUILayout.Label(valueRichText, UiTheme.Text(UiTheme.SizeBody));
+        GUILayout.EndHorizontal();
+    }
+
     private void DrawPanel()
     {
-        float w = 420f;
-        float h = Mathf.Min(470f, UiTheme.VH - 130f);
-        var rect = new Rect(UiTheme.VW - w - UiTheme.RightMargin, _hudBottom + 12f, w, h); // 动态挂 HUD 下方
+        // v2 panel_main 9-slice border 78 + padding 96（UiTheme.Panel 自带），面板外尺寸据此放大
+        float w = 480f;
+        float h = Mathf.Min(560f, UiTheme.VH - 130f);
+        var rect = new Rect(UiTheme.VW - w - UiTheme.RightMargin, _hudBottom + 16f, w, h); // 动态挂 HUD 下方
 
         GUILayout.BeginArea(rect, UiTheme.Panel);
         UiTheme.Wash(rect);
-        GUILayout.Label("<b>委托大厅</b>  <color=#5A5042>[C 关闭]</color>", UiTheme.Title);
+
+        // ── 头部行：标题 + 印章（盖章=受理隐喻；印章 ≤1/屏）──
+        GUILayout.BeginHorizontal();
+        GUILayout.Label("委托大厅  <color=#5A5042>[C 关闭]</color>", UiTheme.Title);
+        GUILayout.FlexibleSpace();
+        var sealRect = GUILayoutUtility.GetRect(48f, 48f, GUILayout.Width(48f), GUILayout.Height(48f));
+        UiTheme.DrawSeal(sealRect);
+        GUILayout.EndHorizontal();
+
         if (_state != null)
         {
-            GUILayout.Label($"★{_state.level} {_state.levelName}　繁荣 {_state.prosperity}　大洋 {_state.gold}　完成 {_state.completed} 单", UiTheme.Text(13));
+            // ── 状态条：数字 20 加粗为面板锚点（层级：字重+颜色 > 字号）──
+            GUILayout.BeginHorizontal();
+            GUILayout.Label($"★{_state.level} {_state.levelName}", UiTheme.Text(UiTheme.SizeBody));
+            GUILayout.Space(16f);
+            GUILayout.Label($"{_state.prosperity} 繁荣", NumStyle());
+            GUILayout.Space(16f);
+            GUILayout.Label($"<color=#9E2B25>{_state.gold} 大洋</color>", NumStyle());
+            GUILayout.Space(16f);
+            GUILayout.Label($"{_state.completed} 单", NumStyle());
+            GUILayout.EndHorizontal();
+
+            // ── 目标梯度进度条（游戏心理学：离目标越近动机越强，进度必须可视化）──
+            int nextIdx = 0;
+            for (int i = 0; i < ProsperityLevels.Length; i++)
+            {
+                if (_state.prosperity >= ProsperityLevels[i].threshold) nextIdx = i + 1;
+            }
+            if (nextIdx < ProsperityLevels.Length)
+            {
+                var next = ProsperityLevels[nextIdx];
+                int span = next.threshold - ProsperityLevels[nextIdx - 1].threshold;
+                int done = _state.prosperity - ProsperityLevels[nextIdx - 1].threshold;
+                GUILayout.Space(8f);
+                GUILayout.BeginHorizontal();
+                GUILayout.Label($"距 <b>★{nextIdx + 1} {next.name}</b> 还需 {next.threshold - _state.prosperity} 繁荣", UiTheme.Hint);
+                GUILayout.FlexibleSpace();
+                GUILayout.Label($"{_state.prosperity} / {next.threshold}", UiTheme.Hint);
+                GUILayout.EndHorizontal();
+                var track = GUILayoutUtility.GetRect(8f, 6f, GUILayout.ExpandWidth(true), GUILayout.Height(6f));
+                UiTheme.DrawProgress(track, done, Mathf.Max(1, span));
+            }
+
+            // 好感行（弱信息：12 号淡墨）
             if (_state.npcs != null && _state.npcs.Length > 0)
             {
                 var aff = new System.Text.StringBuilder();
-                foreach (var n in _state.npcs) aff.Append($"{n.name}({n.affinityLabel}) ");
-                GUILayout.Label($"<color=#5A5042>{aff}</color>", UiTheme.Text(12));
+                foreach (var n in _state.npcs) aff.Append($"{n.name}（{n.affinityLabel}）　");
+                GUILayout.Space(8f);
+                GUILayout.Label(aff.ToString(), UiTheme.Hint);
             }
         }
-        GUILayout.Space(6);
+
+        GUILayout.Space(16f);
 
         var active = _state?.active;
         if (active != null)
         {
-            _scroll = GUILayout.BeginScrollView(_scroll, GUILayout.Height(h - 220f));
-            GUILayout.Label($"<b>「{active.title}」</b>　委托人：{active.npc}　难度 {new string('●', Math.Max(1, active.difficulty))}", UiTheme.Text(14));
-            GUILayout.Label(active.desc, UiTheme.Text(14));
-            GUILayout.Space(4);
-            GUILayout.Label("<b>验收要求</b>", UiTheme.Text(13));
-            GUILayout.Label($"· 建筑类型：<color=#9E2B25>{active.typeLabel}</color>（Tab 面板输入「建一座{active.typeLabel}」或点图纸）", UiTheme.Text(13));
-            GUILayout.Label($"· 占地 ≥ {active.minSize:0} 米　· 方块 ≥ {active.minBlocks} 个", UiTheme.Text(13));
-            GUILayout.Label($"· 建在 <color=#1E7A1E>绿圈</color>内（{active.npc} 附近 {active.zoneRadius:0} 米）", UiTheme.Text(13));
-            GUILayout.Label($"酬劳：{active.rewardGold} 大洋" + (string.IsNullOrEmpty(active.unlock) ? "" : $" + 解锁图纸 <color=#8A5A00>{active.unlock}</color>"), UiTheme.Text(13));
+            // ── 当前委托区 ──
+            SecHeader("当前委托");
+            GUILayout.Space(8f);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label($"<b>{active.title}</b>", UiTheme.SecHead);
+            GUILayout.Space(8f);
+            GUILayout.Label($"<color=#5A5042>{active.npc}　难度 {new string('●', Math.Max(1, active.difficulty))}</color>", UiTheme.Text(UiTheme.SizeBody));
+            GUILayout.EndHorizontal();
+            GUILayout.Space(8f);
+            GUILayout.Label(active.desc, UiTheme.Text(UiTheme.SizeBody));
+
+            // ── 验收要求区（k/v 行式，识别优于回忆：文字明示参数）──
+            GUILayout.Space(16f);
+            SecHeader("验收要求");
+            GUILayout.Space(8f);
+            _scroll = GUILayout.BeginScrollView(_scroll, GUIStyle.none, GUIStyle.none,
+                GUILayout.Height(Mathf.Min(h - 320f, 150f)));
+            KeyValueRow("建筑类型", $"骑楼式 {active.typeLabel} —— Tab 面板输入「建一座{active.typeLabel}」或点图纸");
+            KeyValueRow("规模", $"占地 ≥ {active.minSize:0} 米　·　方块 ≥ {active.minBlocks} 个");
+            KeyValueRow("落点", $"建在 <color=#1E7A1E>绿圈</color>内（{active.npc} 附近 {active.zoneRadius:0} 米）");
             GUILayout.EndScrollView();
 
-            GUI.enabled = !_busy && _builds.Count > 0;
-            if (GUILayout.Button($"提交验收（接单后已建 {_builds.Count} 栋）", UiTheme.BtnPrimary))
-            {
-                StartCoroutine(SubmitCo());
-            }
-            GUI.enabled = !_busy;
-            if (GUILayout.Button("放弃委托", UiTheme.Btn))
-            {
-                StartCoroutine(AbandonCo());
-            }
-            GUI.enabled = true;
+            // ── 酬劳行（结尾甜枣：金底框+大金数字）──
+            GUILayout.Space(16f);
+            GUILayout.BeginHorizontal(UiTheme.Card);
+            GUILayout.Label("酬　劳", UiTheme.Text(UiTheme.SizeBody));
+            GUILayout.Space(16f);
+            GUILayout.Label($"<size=20><b><color=#8A5A00>{active.rewardGold}</color></b></size>", UiTheme.Rich);
+            GUILayout.Label("大洋", UiTheme.Text(UiTheme.SizeBody));
+            GUILayout.Space(16f);
+            GUILayout.Label(string.IsNullOrEmpty(active.unlock) ? "" : $"＋ 解锁图纸「{active.unlock}」", UiTheme.Text(UiTheme.SizeBody));
+            GUILayout.EndHorizontal();
         }
         else if (!_busy)
         {
-            GUILayout.Label("当前没有委托。找谁接活？（走到 NPC 附近可 [E] 闲聊打听）", UiTheme.Text(13));
-            GUILayout.Space(4);
+            SecHeader("当前没有委托");
+            GUILayout.Space(8f);
+            GUILayout.Label("找谁接活？（走到 NPC 附近可 [E] 闲聊打听）", UiTheme.Text(UiTheme.SizeBody));
+            GUILayout.Space(8f);
             if (_npcs.Count == 0)
             {
-                GUILayout.Label("<color=red>场景里没有 NPC（NPCController）</color>", UiTheme.Text(13));
+                GUILayout.Label("<color=red>场景里没有 NPC（NPCController）</color>", UiTheme.Text(UiTheme.SizeBody));
             }
             foreach (var npc in _npcs)
             {
@@ -323,20 +404,53 @@ public class CommissionSystem : MonoBehaviour
             }
         }
 
+        // ── 操作区推底（等效 margin-top:auto）──
+        if (active != null)
+        {
+            GUILayout.FlexibleSpace();
+            GUILayout.BeginHorizontal();
+            GUI.enabled = !_busy && _builds.Count > 0;
+            if (GUILayout.Button($"提 交 验 收（已建 {_builds.Count} 栋）", UiTheme.BtnPrimary, GUILayout.Height(40f)))
+            {
+                StartCoroutine(SubmitCo());
+            }
+            GUI.enabled = !_busy;
+            if (GUILayout.Button("放弃委托", UiTheme.Btn, GUILayout.Height(40f)))
+            {
+                StartCoroutine(AbandonCo());
+            }
+            GUI.enabled = true;
+            GUILayout.EndHorizontal();
+        }
+
         if (_busy)
         {
-            GUILayout.Label("<i>……正在与 NPC 交谈</i>", new GUIStyle(GUI.skin.label) { normal = { textColor = UiTheme.InkSoft } });
+            GUILayout.Space(8f);
+            GUILayout.Label("<i>……正在与 NPC 交谈</i>", UiTheme.Hint);
         }
         if (!string.IsNullOrEmpty(_resultBox))
         {
-            GUILayout.Space(4);
-            GUILayout.Box(_resultBox, new GUIStyle(UiTheme.Card) { wordWrap = true, richText = true, fontSize = 13 }, GUILayout.Height(92));
+            GUILayout.Space(8f);
+            GUILayout.Box(_resultBox, new GUIStyle(UiTheme.Card) { wordWrap = true, richText = true, fontSize = UiTheme.SizeBody }, GUILayout.Height(84f));
         }
         if (!string.IsNullOrEmpty(_status))
         {
+            GUILayout.Space(4f);
             GUILayout.Label(_status, UiTheme.Hint);
         }
         GUILayout.EndArea();
+    }
+
+    /// <summary>状态数字样式（20 加粗，无换行）。</summary>
+    private static GUIStyle _numStyle;
+    private static GUIStyle NumStyle()
+    {
+        if (_numStyle == null)
+        {
+            _numStyle = new GUIStyle(UiTheme.Text(UiTheme.SizeNum)) { wordWrap = false, richText = true };
+            _numStyle.fontStyle = FontStyle.Bold;
+        }
+        return _numStyle;
     }
 
     // ── 网络流程 ───────────────────────────────────────────────────────────
@@ -591,7 +705,7 @@ public class CommissionSystem : MonoBehaviour
 
         var titleStyle = new GUIStyle(GUI.skin.label)
         {
-            fontSize = 28,
+            fontSize = UiTheme.SizeDisplay,
             alignment = TextAnchor.MiddleCenter,
             normal = { textColor = new Color(1f, 1f, 1f, alpha) },
         };
@@ -599,7 +713,7 @@ public class CommissionSystem : MonoBehaviour
 
         var rewardStyle = new GUIStyle(GUI.skin.label)
         {
-            fontSize = 19,
+            fontSize = UiTheme.SizeNum,
             alignment = TextAnchor.MiddleCenter,
             normal = { textColor = new Color(1f, 0.85f, 0.5f, alpha) },
         };
@@ -607,12 +721,12 @@ public class CommissionSystem : MonoBehaviour
         GUI.Label(new Rect(cx - 400, UiTheme.VH * 0.335f + 150, 800, 34),
                   $"＋{_flashGold} 大洋　＋{_flashProsperity} 繁荣{unlockTxt}", rewardStyle);
 
-        // 繁荣度升级庆祝（叠加在下方）
+        // 繁荣度升级庆祝（叠加在下方；演出豁免：峰值时刻，字号取 Display 档）
         if (_levelUpTo > 0 && _state != null)
         {
             var lvlStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 24,
+                fontSize = UiTheme.SizeDisplay,
                 alignment = TextAnchor.MiddleCenter,
                 fontStyle = FontStyle.Bold,
                 normal = { textColor = new Color(0.6f, 0.95f, 1f, alpha) },
