@@ -437,23 +437,35 @@ public class CinematicIntro : MonoBehaviour
         if (_titleFadeOut) _titleAlpha = Mathf.MoveTowards(_titleAlpha, 0f, Time.unscaledDeltaTime * 2.5f);
         if (_titleAlpha > 0.01f)
         {
+            // 标题区 scrim：上下渐变暗底（电影字幕标准做法），白字不再裸压门楼/灯笼
+            DrawTitleScrim(_titleAlpha);
+
             float cx = Screen.width / 2f;
+            // 标题字距呼吸（中式标题加宽 8%）+描边，主字加 1px 墨影增强图底对比
             var titleStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = Mathf.Min(72, Screen.width / 12),
+                fontSize = Mathf.Min(76, Screen.width / 11),
                 alignment = TextAnchor.MiddleCenter,
                 font = UiTheme.KaiFont,
-                normal = { textColor = new Color(1f, 1f, 1f, _titleAlpha) },
+                normal = { textColor = new Color(1f, 0.98f, 0.92f, _titleAlpha) },
             };
+            var titleShadow = new GUIStyle(titleStyle) { normal = { textColor = new Color(0f, 0f, 0f, _titleAlpha * 0.85f) } };
+            string spacedTitle = SpacedText(Title, 0.08f);
+            GUI.Label(new Rect(cx - 400 + 3, Screen.height * 0.27f + 3, 800, 100), spacedTitle, titleShadow);
+            GUI.Label(new Rect(cx - 400, Screen.height * 0.27f, 800, 100), spacedTitle, titleStyle);
+
+            // 副标题：去透明实色+双点装饰（· 副题 ·）+墨影——图底对比的格式塔修复
             var subStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = Mathf.Min(26, Screen.width / 40),
+                fontSize = Mathf.Min(30, Screen.width / 34),
                 alignment = TextAnchor.MiddleCenter,
                 font = UiTheme.KaiFont,
-                normal = { textColor = new Color(1f, 0.95f, 0.8f, _titleAlpha * 0.9f) },
+                normal = { textColor = new Color(0.96f, 0.90f, 0.74f, _titleAlpha) },
             };
-            GUI.Label(new Rect(cx - 400, Screen.height * 0.30f, 800, 90), Title, titleStyle);
-            GUI.Label(new Rect(cx - 400, Screen.height * 0.30f + 84, 800, 40), Subtitle, subStyle);
+            var subShadow = new GUIStyle(subStyle) { normal = { textColor = new Color(0f, 0f, 0f, _titleAlpha * 0.9f) } };
+            string spacedSub = "· " + SpacedText(Subtitle, 0.10f) + " ·";
+            GUI.Label(new Rect(cx - 400 + 2, Screen.height * 0.27f + 100 + 2, 800, 44), spacedSub, subShadow);
+            GUI.Label(new Rect(cx - 400, Screen.height * 0.27f + 100, 800, 44), spacedSub, subStyle);
         }
 
         // 开始确认（俯冲定格后）：呼吸闪烁"开始"提示
@@ -462,14 +474,15 @@ public class CinematicIntro : MonoBehaviour
             float pulse = 0.55f + 0.45f * Mathf.Abs(Mathf.Sin(Time.unscaledTime * 2.2f));
             var startStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = Mathf.Min(30, Screen.width / 30),
+                fontSize = Mathf.Min(32, Screen.width / 28),
                 alignment = TextAnchor.MiddleCenter,
                 font = UiTheme.KaiFont,
-                normal = { textColor = new Color(1f, 0.95f, 0.8f, pulse) },
+                normal = { textColor = new Color(1f, 0.96f, 0.84f, pulse) },
             };
-            var startShadow = new GUIStyle(startStyle) { normal = { textColor = new Color(0f, 0f, 0f, pulse) } };
+            var startShadow = new GUIStyle(startStyle) { normal = { textColor = new Color(0f, 0f, 0f, pulse * 0.9f) } };
             string txt = "— 按任意键，开始你的小镇 —";
-            Rect sr = new Rect(0, Screen.height * 0.58f, Screen.width, 50f);
+            // 0.68：避开中轴 NPC 头部（视觉重量最高区），落在天空留白带上
+            Rect sr = new Rect(0, Screen.height * 0.68f, Screen.width, 52f);
             GUI.Label(new Rect(sr.x + 2, sr.y + 2, sr.width, sr.height), txt, startShadow);
             GUI.Label(sr, txt, startStyle);
         }
@@ -606,5 +619,48 @@ public class CinematicIntro : MonoBehaviour
         if (cam == null) return Vector3.zero;
         var ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.55f, 0f));
         return ray.GetPoint(14f);
+    }
+
+    /// <summary>
+    /// 标题区渐变 scrim：上带亮→暗、下带暗→亮各叠 3 条递进色带（模拟垂直渐变），
+    /// 电影字幕标准做法——白字永远不裸压复杂背景。alpha 随标题淡入淡出。
+    /// </summary>
+    private void DrawTitleScrim(float alpha)
+    {
+        const int bands = 3;
+        float bandH = Screen.height * 0.045f;
+        var tex = Texture2D.whiteTexture;
+        var prev = GUI.color;
+
+        // 上带（标题上方，由上向下渐暗）
+        for (int i = 0; i < bands; i++)
+        {
+            float a = alpha * 0.42f * (1f - i / (float)bands);
+            GUI.color = new Color(0f, 0f, 0f, a);
+            GUI.DrawTexture(new Rect(0, Screen.height * 0.24f + i * bandH, Screen.width, bandH), tex);
+        }
+        // 下带（副标题下方，由暗渐透明）
+        for (int i = 0; i < bands; i++)
+        {
+            float a = alpha * 0.42f * (1f - i / (float)bands) * (1f - i * 0.15f);
+            GUI.color = new Color(0f, 0f, 0f, a);
+            GUI.DrawTexture(new Rect(0, Screen.height * 0.27f + 148f + i * bandH, Screen.width, bandH), tex);
+        }
+        GUI.color = prev;
+    }
+
+    /// <summary>标题字距加宽：每个字符后插空格（比例 0~0.2），中式标题"字距呼吸"。</summary>
+    private static string SpacedText(string s, float ratio)
+    {
+        if (string.IsNullOrEmpty(s) || ratio <= 0f) return s;
+        int spaces = Mathf.Max(1, Mathf.RoundToInt(ratio * 10f) / 2);
+        var pad = new string(' ', spaces);
+        var sb = new System.Text.StringBuilder();
+        for (int i = 0; i < s.Length; i++)
+        {
+            sb.Append(s[i]);
+            if (i < s.Length - 1) sb.Append(pad);
+        }
+        return sb.ToString();
     }
 }

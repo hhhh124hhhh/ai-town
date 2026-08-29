@@ -85,9 +85,11 @@ public static class MaterialLibrary
                 mat.SetFloat("_Smoothness", 0.9f);
                 break;
             case Cat.Glow:
-                mat.SetColor("_BaseColor", color);
+                // 招牌/匾额：暖黄底色 + 温和自发光（0.55x）。
+                // 旧 2.2x 纯白过曝——远处就是一块无字白板，观众读成"UI 没加载"。
+                mat.SetColor("_BaseColor", new Color(1f, 0.82f, 0.45f));
                 mat.EnableKeyword("_EMISSION");
-                mat.SetColor("_EmissionColor", color * 2.2f);
+                mat.SetColor("_EmissionColor", new Color(1f, 0.72f, 0.35f) * 0.55f);
                 mat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
                 break;
             case Cat.Leaves:
