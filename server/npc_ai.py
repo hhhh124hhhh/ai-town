@@ -48,7 +48,7 @@ def call_llm_chat(system_prompt, user_message, history=None):
     messages.append({"role": "user", "content": user_message})
 
     payload = {"model": cfg["model"], "messages": messages,
-               "temperature": 0.8, "max_tokens": 300, "stream": False}
+               "temperature": 0.8, "max_tokens": 3000, "stream": False}
     url = cfg["base_url"].rstrip("/") + "/chat/completions"
     curl_cmd = ["curl", "-s", "-X", "POST", url,
                 "-H", "Content-Type: application/json",
@@ -60,7 +60,13 @@ def call_llm_chat(system_prompt, user_message, history=None):
     resp = json.loads(result.stdout)
     if "error" in resp:
         raise RuntimeError(resp["error"].get("message", str(resp["error"]))[:200])
-    return resp["choices"][0]["message"]["content"].strip()
+    content = (resp["choices"][0]["message"].get("content") or "").strip()
+    if not content:
+        # 推理模型（如 step-3.7-flash）思考占满 max_tokens 时 content 为空：
+        # 退而取 reasoning 尾部一行，避免 NPC 哑口无言
+        reasoning = (resp["choices"][0]["message"].get("reasoning") or "").strip()
+        content = reasoning.splitlines()[-1][:120] if reasoning else ""
+    return content
 
 
 class NPCManager:
@@ -105,9 +111,11 @@ class NPCManager:
             f"玩家：{m['user']}\n{npc['name']}：{m['npc']}" for m in npc["memory"][-10:]
         ) or "（暂无）"
         return (
-            f"你是 {npc['name']}，AI 小镇里的{npc['role']}。\n"
+            f"你是 {npc['name']}，民国小镇里的{npc['role']}，生活在青砖灰瓦、有护城河和石桥的江南小镇。\n"
             f"性格：{npc['personality']}\n"
-            "用中文回答，保持角色设定，每次回答不超过 3 句话，口语化自然。\n"
+            "用民国白话回答，保持角色设定，每次回答不超过 3 句话，口语化自然。\n"
+            "世界观铁律：这是 1920 年代的中国小镇，只能谈大洋、烧饼、茶馆、账房这类时代事物；"
+            "绝不出现电脑、手机、AI、GPU、机器人、代码等任何现代词汇或概念。\n"
             f"最近的对话记忆：\n{mem_lines}"
         )
 

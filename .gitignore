@@ -42,3 +42,4 @@ server/__pycache__/
 .codely/
 .codely-cli/
 CODELY.md
+llm_config.json
