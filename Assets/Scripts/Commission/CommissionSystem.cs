@@ -243,7 +243,7 @@ public class CommissionSystem : MonoBehaviour
     }
 
     private float _submitHintUntil;
-    private string _submitHintBuilding = "";
+    private string _submitHintText = "";
 
     /// <summary>服务离线提示（demo 现场保命条）：只有负反馈会让人困惑，必须带行动方案。
     /// 委托/HUD 依赖本地 Python 服务；建造（Tab）离线可用，此条只指路不影响主演示。</summary>
@@ -264,6 +264,16 @@ public class CommissionSystem : MonoBehaviour
     }
 
     /// <summary>
+    /// 顶部中央引导条统一入口（素纸卡，10s 级）：落成引导/开局存量委托提醒共用，
+    /// C 面板打开时让位（面板内按钮可见，无需引导）。面板自动隐藏类流程的提示必须挂这里。
+    /// </summary>
+    public void ShowTopHint(string text, float seconds)
+    {
+        _submitHintText = text;
+        _submitHintUntil = Time.unscaledTime + seconds;
+    }
+
+    /// <summary>
     /// 生成落位后由 BuildingPanel 调用：有进行中委托时顶部中央引导「按 C 提交验收」。
     /// 生成后面板已自动隐藏（按键驱动定则），完成提示必须挂在常驻 HUD 层——
     /// 否则玩家落成后屏幕上零引导，不知道验收入口在哪（2026-08-29"没人验收"判例）。
@@ -271,18 +281,16 @@ public class CommissionSystem : MonoBehaviour
     public void NotifyPlacedForCommission(string buildingName)
     {
         if (_state?.active == null) return; // 没接单不引导（自由建造模式）
-        _submitHintBuilding = buildingName;
-        _submitHintUntil = Time.unscaledTime + 9f;
+        ShowTopHint($"「{_state.active.title}」已落成——按 [C] 提交验收", 9f);
     }
 
-    /// <summary>顶部中央提交引导条（素纸卡，与 HUD 同语言）。</summary>
+    /// <summary>顶部中央引导条渲染。</summary>
     private void DrawSubmitHint()
     {
-        if (Time.unscaledTime >= _submitHintUntil || _state?.active == null) return;
-        string txt = $"「{_state.active.title}」已落成——按 [C] 提交验收";
+        if (Time.unscaledTime >= _submitHintUntil || string.IsNullOrEmpty(_submitHintText)) return;
         var st = UiTheme.Text(UiTheme.SizeEmph);
         var measure = new GUIStyle(st) { wordWrap = false };
-        var s = measure.CalcSize(new GUIContent(txt));
+        var s = measure.CalcSize(new GUIContent(_submitHintText));
         float w = s.x + 48f;
         float h = s.y + 20f;
         // 顶部中央（左右上角被 HUD/键位卡占位，底部中央是功能坞位；顶部中空闲且视线起点）
@@ -290,7 +298,7 @@ public class CommissionSystem : MonoBehaviour
         GUILayout.BeginArea(rect);
         UiTheme.PaperCard(rect, 0.94f);
         GUILayout.Space(8f);
-        GUILayout.Label(txt, st);
+        GUILayout.Label(_submitHintText, st);
         GUILayout.EndArea();
     }
 
@@ -655,7 +663,13 @@ public class CommissionSystem : MonoBehaviour
                 _state = resp.state;
                 _fetched = true;
                 _offline = false;
-                if (_state.active != null) CreateZoneRing(_state.active);
+                if (_state.active != null)
+                {
+                    CreateZoneRing(_state.active);
+                    // 开局存量委托显式提醒（2026-08-29 用户"绿圈在哪没提示"）：
+                    // 服务器进程活着时委托跨 Play 会话保留，静默复现=玩家不知道手上压着单
+                    ShowTopHint($"手上有未完成委托「{_state.active.title}」——跟着绿圈方位走，建完按 [C] 提交验收", 10f);
+                }
             }
             else _offline = true;
         }
@@ -963,6 +977,8 @@ public class CommissionSystem : MonoBehaviour
         if (c == null) return;
         _lastCommissionNpc = c.npc;
         DestroyZoneRing();
+        // 脏数据守卫：zone 字段反序列化失败会是 (0,0,0)，在原点画一个无意义圈误导玩家
+        if (c.zoneRadius <= 0f) return;
 
         var go = new GameObject("CommissionZoneRing");
         _zoneGuideCenter = new Vector2(c.zoneX, c.zoneZ); // 导航圆心=发单点（落位后跟随建筑）
