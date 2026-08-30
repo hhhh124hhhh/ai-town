@@ -386,9 +386,13 @@ public class BuildingPlacement : MonoBehaviour
         _real.transform.localScale = Vector3.one * _scale; // 缩放一并落到真实建筑
         _real.SetActive(true);
         var real = _real;
+        // Cleanup 会把 _onConfirmed 置 null——必须先捕获再清理，否则回调永不触发：
+        // RegisterBuild/绿圈跟随/提交引导/自动接路全部静默失效（2026-08-30
+        // "建了两座高塔没人验收"根因，自落地动画加入起即坏）
+        var onConfirmed = _onConfirmed;
         Cleanup();
         StartCoroutine(ConfirmCo(real)); // 落地动画 + 落地瞬间起尘（给"砸到地面"一个物理反馈）
-        _onConfirmed?.Invoke(real);
+        onConfirmed?.Invoke(real);
     }
 
     /// <summary>确认落地流程：DropIn 动画收尾时在脚印中心起一蓬尘（缩放随建筑脚印）。</summary>

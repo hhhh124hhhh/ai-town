@@ -14,16 +14,33 @@ public class CommissionSystem : MonoBehaviour
     private static CommissionSystem _instance;
     public static CommissionSystem Instance => _instance;
 
+    /// <summary>当前有效委托（含 JsonUtility null 怪癖防御）。
+    /// JsonUtility.FromJson 把 JSON "active": null 反序列化成全默认实例（id 为空）
+    /// 而非 null——直接判 active != null 永远为真，"单消失"边沿检测永不触发、
+    /// 绿圈成孤儿、HUD 谎报进行中（2026-08-30 Play 实测判例）。以 id 判真。</summary>
+    private CommissionInfo ActiveInfo
+    {
+        get
+        {
+            var a = _state?.active;
+            return (a != null && !string.IsNullOrEmpty(a.id)) ? a : null;
+        }
+    }
+
     /// <summary>是否有进行中的委托（BuildingPanel 打开时据此决定是否创建绿圈）。</summary>
-    public bool HasActiveCommission => _state?.active != null;
+    public bool HasActiveCommission => ActiveInfo != null;
+
+    /// <summary>当前进行中的委托（无则 null）。对话快捷项据此动态生成。</summary>
+    public CommissionInfo ActiveCommission => ActiveInfo;
 
     /// <summary>确保绿圈存在（BuildingPanel 打开时调用，延迟显示绿圈）。</summary>
     public void EnsureZoneRing()
     {
-        if (_state?.active != null && _zoneRing == null)
+        var active = ActiveInfo;
+        if (active != null && _zoneRing == null)
         {
-            ResolveZonePlacement(_state.active);
-            CreateZoneRing(_state.active);
+            ResolveZonePlacement(active);
+            CreateZoneRing(active);
         }
     }
 
@@ -142,9 +159,6 @@ public class CommissionSystem : MonoBehaviour
     private Vector2 _scroll;
     private LineRenderer _zoneRing;
 
-    /// <summary>当前进行中的委托（无则 null）。对话快捷项据此动态生成。</summary>
-    public CommissionInfo ActiveCommission => _state?.active;
-
     /// <summary>懒创建（BuildingPanel.Start 调用），场景无需手动接线。</summary>
     public static void EnsureExists()
     {
@@ -209,7 +223,7 @@ public class CommissionSystem : MonoBehaviour
 
         // 到圈提示（2026-08-29 用户"没一个是能放的"——玩家把氛围烛光当落点标记，
         // 不知道"能放"的入口是 Tab 生成）：首次进绿圈明确告知放置流程，30s 冷却防刷
-        if (_state?.active != null && _zoneGuideCenter.HasValue
+        if (ActiveInfo != null && _zoneGuideCenter.HasValue
             && Time.unscaledTime >= _zoneHintCooldownUntil
             && !CinematicIntro.IsCinematic)
         {
@@ -247,23 +261,23 @@ public class CommissionSystem : MonoBehaviour
             var resp = JsonUtility.FromJson<StateResponse>(json);
             if (resp == null || !resp.ok) continue;
 
-            bool hadActive = _state?.active != null;
+            bool hadActive = ActiveInfo != null;
             _state = resp.state;
             _fetched = true;
             _offline = false;
 
             // 边沿检测：本地有单→服务器没了（服务器重启/被清），提示并撤引导
-            if (hadActive && _state.active == null)
+            if (hadActive && ActiveInfo == null)
             {
                 DestroyZoneRing();
                 _builds.Clear();
                 ShowTopHint("委托记录已失效（服务重启）——按 [C] 重新接单", 8f);
             }
             // 单还在但 zone 漂了/首次见到单：对齐绿圈
-            else if (_state.active != null && _zoneRing == null)
+            else if (ActiveInfo != null && _zoneRing == null)
             {
-                ResolveZonePlacement(_state.active);
-                CreateZoneRing(_state.active);
+                ResolveZonePlacement(ActiveInfo);
+                CreateZoneRing(ActiveInfo);
             }
         }
     }
@@ -280,6 +294,7 @@ public class CommissionSystem : MonoBehaviour
             Root = root,
         });
         if (_builds.Count > 10) _builds.RemoveAt(0);
+        Debug.Log($"[Commission] 已登记建筑「{name}」（待验收 {_builds.Count} 栋）");
     }
 
     /// <summary>模板是否解锁。无实例/离线/未拉到状态时全解锁（保证原演示不受影响）。</summary>
@@ -355,8 +370,9 @@ public class CommissionSystem : MonoBehaviour
     /// </summary>
     public void NotifyPlacedForCommission(string buildingName)
     {
-        if (_state?.active == null) return; // 没接单不引导（自由建造模式）
-        ShowTopHint($"「{_state.active.title}」已落成——按 [C] 提交验收", 9f);
+        var active = ActiveInfo;
+        if (active == null) return; // 没接单不引导（自由建造模式）
+        ShowTopHint($"「{active.title}」已落成——按 [C] 提交验收", 9f);
     }
 
     /// <summary>顶部中央引导条渲染。</summary>
@@ -389,7 +405,7 @@ public class CommissionSystem : MonoBehaviour
     {
         const float Pad = 16f;
         var st = UiTheme.Text(UiTheme.SizeBody);
-        var active = _state.active;
+        var active = ActiveInfo;
 
         // ── 数值变化检测（审计口诀第三条：数字不能静跳）──
         TrackValueChange(ref _goldAnim, _state.gold);
@@ -614,7 +630,7 @@ public class CommissionSystem : MonoBehaviour
 
         GUILayout.Space(16f);
 
-        var active = _state?.active;
+        var active = ActiveInfo;
         if (active != null)
         {
             // ── 当前委托区 ──
@@ -738,10 +754,11 @@ public class CommissionSystem : MonoBehaviour
                 _state = resp.state;
                 _fetched = true;
                 _offline = false;
-                if (_state.active != null)
+                if (ActiveInfo != null)
                 {
-                    ResolveZonePlacement(_state.active); // 旧布局下的 zone 坐标在新场景可能被占
-                    CreateZoneRing(_state.active);
+                    var activeInfo = ActiveInfo;
+                    ResolveZonePlacement(activeInfo); // 旧布局下的 zone 坐标在新场景可能被占
+                    CreateZoneRing(activeInfo);
                     // 箭头引导三层时序（用户定则）：恢复单只轻引导——提示条+HUD 方位行；
                     // 玩家按过 C（知情）箭头才出现，60s 没按自动出（兜底防卡死）。
                     // 注意 _commissionIssuedAt 在 Start 前为 0=兜底立即满足，这里显式重置为现在。
@@ -797,28 +814,30 @@ public class CommissionSystem : MonoBehaviour
         _status = $"<color=green>已接下「{resp.commission.title}」，按 [Tab] 建造，建完按 [C] 提交验收</color>";
     }
 
-    // ── 绿圈空地解析（2026-08-29 用户改布局后"绿圈被建筑占了"）────────────
-    // 原则：场景布局用户已调好不动，动的是绿圈——运行时以 NPC 为圆心环形采样，
-    // 找第一个"整块圆盘不与任何建筑脚印相交"的点。服务端 submit 判分用的是客户端
-    // 上报的落点圆心（_lastPlacedPos），绿圈本地挪位不影响判分闭环。
+    // ── 绿圈空地解析（2026-08-29 二版）────────────────────────────────────
+    // 旧版要求"整块圆盘不压任何建筑"，25m 大圆盘在密集镇心必然无解 → 半径连缩到
+    // 9m、圆心远挪 22m，绿圈实际从玩家视野里消失（"没有绿圈"根因之一）。
+    // 新策略：绿圈是"验收区域"不是"空地标记"——判分圆心跟随玩家落位，圈压建筑可
+    // 接受。只把圆心从建筑脚印里挪出来（步进 2m、最多 10m），半径永不缩，圈留在
+    // NPC 附近（委托文案"建在我附近"的预期）。
 
-    /// <summary>原地修正 commission 的 zone 坐标到附近空地（不占用则原样返回）。</summary>
+    /// <summary>圆心落在建筑脚印内时小幅避让到最近空点；找不到就保留原位。</summary>
     private void ResolveZonePlacement(CommissionInfo c)
     {
         if (c == null || c.zoneRadius <= 0f) return;
         var origin = new Vector2(c.zoneX, c.zoneZ);
-        if (!ZoneBlocked(origin, c.zoneRadius)) return; // 现位空闲
+        if (!PointInAnyBuilding(origin)) return; // 现位可用
 
-        // 8 方向 × 1~3 倍半径环形采样，最近空位优先
-        for (int ring = 1; ring <= 3; ring++)
+        // 8 方向 × 步进 2m（最多 10m），最近空点优先
+        for (int step = 1; step <= 5; step++)
         {
             for (int d = 0; d < 8; d++)
             {
-                float ang = (d * 45f + 22.5f) * Mathf.Deg2Rad; // +22.5° 避开正轴先撞建筑
-                var cand = origin + new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * (c.zoneRadius * ring);
+                float ang = (d * 45f + 22.5f) * Mathf.Deg2Rad;
+                var cand = origin + new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * (2f * step);
                 // 镇界内（与 PlayerBounds/放置系统同界）
                 if (cand.x < -17f || cand.x > 21f || cand.y < -21f || cand.y > 25f) continue;
-                if (!ZoneBlocked(cand, c.zoneRadius))
+                if (!PointInAnyBuilding(cand))
                 {
                     c.zoneX = cand.x;
                     c.zoneZ = cand.y;
@@ -826,20 +845,14 @@ public class CommissionSystem : MonoBehaviour
                 }
             }
         }
-        // 三圈全占：缩小半径到 60% 再试一轮（比无圈好）
-        if (c.zoneRadius > 4f)
-        {
-            c.zoneRadius *= 0.6f;
-            ResolveZonePlacement(c);
-        }
+        // 镇心全占：保留原位（判分圆心跟随落位，不影响验收闭环）
     }
 
-    /// <summary>圆盘是否与 _Buildings 任一建筑脚印相交（脚印内收 6%，同放置系统规则）。</summary>
-    private static bool ZoneBlocked(Vector2 center, float radius)
+    /// <summary>点是否落在 _Buildings 任一建筑脚印内（XZ，脚印内收 6%，同放置规则）。</summary>
+    private static bool PointInAnyBuilding(Vector2 p)
     {
         var buildings = GameObject.Find("_Buildings");
         if (buildings == null) return false;
-        float r2 = radius * radius;
         foreach (Transform child in buildings.transform)
         {
             if (!child.gameObject.activeInHierarchy) continue;
@@ -848,11 +861,8 @@ public class CommissionSystem : MonoBehaviour
             var b = rs[0].bounds;
             foreach (var r in rs) b.Encapsulate(r.bounds);
             float inX = b.size.x * 0.06f, inZ = b.size.z * 0.06f;
-            var min = new Vector2(b.min.x + inX, b.min.z + inZ);
-            var max = new Vector2(b.max.x - inX, b.max.z - inZ);
-            // 圆心到 AABB 最近点距离 < 半径 = 相交
-            var closest = new Vector2(Mathf.Clamp(center.x, min.x, max.x), Mathf.Clamp(center.y, min.y, max.y));
-            if ((closest - center).sqrMagnitude < r2) return true;
+            if (p.x > b.min.x + inX && p.x < b.max.x - inX
+                && p.y > b.min.z + inZ && p.y < b.max.z - inZ) return true;
         }
         return false;
     }
@@ -863,19 +873,21 @@ public class CommissionSystem : MonoBehaviour
     /// </summary>
     public IEnumerator RequestCommissionFromDialog(NPCController npc)
     {
-        if (_state?.active != null)
+        var existing = ActiveInfo;
+        if (existing != null)
         {
             DialogSystem.Instance?.AddSystemLine(
-                $"【{npc.npcName}】你手上还有一单「{_state.active.title}」没交呢，先干完那单（[C] 看详情）。");
+                $"【{npc.npcName}】你手上还有一单「{existing.title}」没交呢，先干完那单（[C] 看详情）。");
             yield break;
         }
 
         yield return NewCo(npc);
 
         // 接单结果同步进对话历史（NewCo 已写 _status / NPC 气泡）
-        if (_state?.active != null)
+        var accepted = ActiveInfo;
+        if (accepted != null)
         {
-            var a = _state.active;
+            var a = accepted;
             // 对话接单=知情（NPC 已在对话里交代委托详情），箭头引导时序直接放行
             _panelOpenedAtLeastOnce = true;
             DialogSystem.Instance?.AddSystemLine(
@@ -892,6 +904,14 @@ public class CommissionSystem : MonoBehaviour
         if (ApiClient.Instance == null) yield break;
 
         // 组装建筑清单（清除过的建筑 transform 已销毁，跳过）
+        var buildingsRoot = GameObject.Find("_Buildings");
+        // 建筑层可能被整体缩放（用户把 _Buildings 缩到 0.25 后镇子变小）：服务端 minSize
+        // 按设计尺寸判分，渲染尺寸必须除以层缩放归一化回去；玩家放置缩放（Ctrl+滚轮）
+        // 不在层缩放内，保留其 S 级加成
+        float designScale = buildingsRoot != null
+            ? Mathf.Max(0.0001f, Mathf.Abs(buildingsRoot.transform.lossyScale.x))
+            : 1f;
+
         var entries = new List<BuildEntry>();
         foreach (var rec in _builds)
         {
@@ -901,6 +921,8 @@ public class CommissionSystem : MonoBehaviour
             var bounds = renderers[0].bounds;
             foreach (var r in renderers) bounds.Encapsulate(r.bounds);
             Vector3 pos = rec.Root.position;
+            // 上报完整尺寸（旧版发 extents=半尺寸，服务端当占地用——灯塔被误判 0.8m<4m
+            // 永远验收失败，"NPC 不评价"的真根因 2026-08-29）
             entries.Add(new BuildEntry
             {
                 name = rec.Name,
@@ -908,7 +930,12 @@ public class CommissionSystem : MonoBehaviour
                 template = rec.Template,
                 blockCount = rec.BlockCount,
                 pos = new[] { pos.x, pos.y, pos.z },
-                extents = new[] { bounds.extents.x, bounds.extents.y, bounds.extents.z },
+                extents = new[]
+                {
+                    bounds.size.x / designScale,
+                    bounds.size.y / designScale,
+                    bounds.size.z / designScale,
+                },
             });
         }
         if (entries.Count == 0)
@@ -918,7 +945,7 @@ public class CommissionSystem : MonoBehaviour
         }
 
         _busy = true;
-        _status = $"{entries.Count} 栋建筑提交验收，{(_state?.active?.npc ?? "NPC")} 正在检查……";
+        _status = $"{entries.Count} 栋建筑提交验收，{(ActiveInfo?.npc ?? "NPC")} 正在检查……";
         string json = null, error = null;
         var req = new BuildsRequest { builds = entries.ToArray() };
         if (_lastPlacedPos.HasValue)
@@ -1003,7 +1030,7 @@ public class CommissionSystem : MonoBehaviour
         {
             return new Vector3(_lastPlacedPos.Value.x, 0.1f, _lastPlacedPos.Value.z);
         }
-        var active = _state?.active;
+        var active = ActiveInfo;
         if (active != null) return new Vector3(active.zoneX, 0.1f, active.zoneZ);
         return _npcs.Count > 0 ? _npcs[0].transform.position : Vector3.zero;
     }
@@ -1144,9 +1171,10 @@ public class CommissionSystem : MonoBehaviour
         lr.widthMultiplier = 0.35f;
         lr.positionCount = 65;
         lr.material = RuntimeFxMat.Make(Color.white); // 材质用白色，颜色由 LineRenderer 控制
-        // 2026-08-29 修复：降低饱和度/透明度，融入黄昏场景（之前绿色太亮太刺眼）
-        lr.startColor = new Color(0.4f, 0.7f, 0.5f, 0.4f); // 柔和青绿，半透明
-        lr.endColor = new Color(0.4f, 0.7f, 0.5f, 0.4f);
+        // 柔和青绿色相保留（不回荧光绿），透明度拉回可见——昨晚柔和化把圈线压到 0.4、
+        // 圆盘压到 0.08，黄昏场景里几乎隐形（2026-08-29"没有绿圈显示"根因之一）
+        lr.startColor = new Color(0.4f, 0.7f, 0.5f, 0.85f);
+        lr.endColor = new Color(0.4f, 0.7f, 0.5f, 0.85f);
         WriteRingPoints(lr, center, radius);
 
         // 地面圆盘：验收区域整块淡绿（y=0.05 垫在路网 0.035 之上防闪面）
@@ -1156,7 +1184,7 @@ public class CommissionSystem : MonoBehaviour
         var mf = diskGo.AddComponent<MeshFilter>();
         mf.sharedMesh = BuildDiskMesh(radius);
         var mr = diskGo.AddComponent<MeshRenderer>();
-        mr.material = RuntimeFxMat.Make(new Color(0.4f, 0.7f, 0.5f, 0.08f)); // 极淡青绿，只提示区域
+        mr.material = RuntimeFxMat.Make(new Color(0.4f, 0.7f, 0.5f, 0.20f)); // 柔和青绿，区域可见
         diskGo.transform.position = new Vector3(center.x, 0.05f, center.y);
     }
 
@@ -1219,11 +1247,12 @@ public class CommissionSystem : MonoBehaviour
     {
         _lastPlacedPos = pos;
         _zoneGuideCenter = new Vector2(pos.x, pos.z);
-        if (_state?.active == null || _zoneRing == null) return;
+        var active = ActiveInfo;
+        if (active == null || _zoneRing == null) return;
 
         // 圈线 65 点 + 地面圆盘一起搬到落位（半径不变）
         var center = new Vector2(pos.x, pos.z);
-        WriteRingPoints(_zoneRing, center, _state.active.zoneRadius);
+        WriteRingPoints(_zoneRing, center, active.zoneRadius);
         if (_zoneRing.transform.childCount > 0)
         {
             _zoneRing.transform.GetChild(0).position = new Vector3(pos.x, 0.05f, pos.z);
@@ -1233,7 +1262,7 @@ public class CommissionSystem : MonoBehaviour
     /// <summary>查询当前委托验收区（圆心 XZ + 半径），供放置系统做绿圈外提示。</summary>
     public bool TryGetActiveZone(out Vector2 zoneXZ, out float radius)
     {
-        var active = _state?.active;
+        var active = ActiveInfo;
         if (active != null)
         {
             zoneXZ = new Vector2(active.zoneX, active.zoneZ);
