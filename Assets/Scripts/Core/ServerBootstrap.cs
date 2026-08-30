@@ -152,17 +152,20 @@ public static class ServerBootstrap
     }
 
     /// <summary>server 目录探测：编辑器=Assets 同级 server/（2026-08-29 server 并入
-    /// 仓库内）+ 旧布局（Assets 上两级，兼容旧检出版本）；打包=exe 旁或 StreamingAssets 内。</summary>
+    /// 仓库内）+ 旧布局（Assets 上两级，兼容旧检出版本）；打包=exe 旁或 StreamingAssets 内。
+    /// 打包版 dataPath=xxx_Data → "Data/StreamingAssets/server"（2026-08-30 实测修正：
+    /// 旧 ".." 候选解出的是 exe 旁 StreamingAssets，多退一层，永不命中）。</summary>
     private static string FindServerDir()
     {
         string dataPath = UnityEngine.Application.dataPath;
         string[] candidates =
         {
-            Path.GetFullPath(Path.Combine(dataPath, "server")),                    // 新：Assets/server
-            Path.GetFullPath(Path.Combine(dataPath, "..", "server")),             // 新：项目根/server
-            Path.GetFullPath(Path.Combine(dataPath, "..", "..", "server")),       // 旧：工作区根/server
-            Path.GetFullPath(Path.Combine(dataPath, "..", "StreamingAssets", "server")),
-            Path.GetFullPath(Path.Combine(dataPath, "..", "..", "..", "server")),
+            Path.GetFullPath(Path.Combine(dataPath, "server")),                          // 编辑器：Assets/server
+            Path.GetFullPath(Path.Combine(dataPath, "..", "server")),                    // 编辑器：项目根/server
+            Path.GetFullPath(Path.Combine(dataPath, "..", "..", "server")),              // 旧：工作区根/server
+            Path.GetFullPath(Path.Combine(dataPath, "StreamingAssets", "server")),       // 打包：Data/StreamingAssets/server
+            Path.GetFullPath(Path.Combine(dataPath, "..", "StreamingAssets", "server")), // 旧候选保留（exe 旁变体）
+            Path.GetFullPath(Path.Combine(dataPath, "..", "..", "..", "server")),        // 旧：兼容更深层级
         };
         foreach (string dir in candidates)
         {

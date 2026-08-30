@@ -43,3 +43,6 @@ server/__pycache__/
 .codely-cli/
 CODELY.md
 llm_config.json
+
+# server 副本由 AiTownBuild.SyncServerToStreamingAssets 构建时自动生成，勿入库
+Assets/StreamingAssets/server/
