@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using System.Linq;
 
 /// <summary>
 /// NPC 自主游走：围绕出生点（home）在半径内慢速踱步，营造小镇烟火气。
@@ -32,7 +33,7 @@ public class NpcWander : MonoBehaviour
     private float _stateUntil;
     private bool _walking;
     private const float ArriveDist = 0.35f;
-    private const float GroundRayLift = 2.5f;   // 起点抬高（越过模型顶）再向下打
+    private const float GroundRayLift = 5f;   // 起点抬高（越过模型顶+建筑低檐）再向下打
 
     private void Awake()
     {
@@ -75,7 +76,7 @@ public class NpcWander : MonoBehaviour
 
     private void PickNewTarget()
     {
-        for (int i = 0; i < 4; i++) // 多试几次避开太贴身的点
+        for (int i = 0; i < 6; i++) // 多试几次避开太贴身的点
         {
             float a = Random.value * Mathf.PI * 2f;
             float r = Mathf.Sqrt(Random.value) * radius; // 面积均匀分布
@@ -83,11 +84,21 @@ public class NpcWander : MonoBehaviour
             // 目标离玩家太近会显得"贴脸游走"，重新抽
             if (_npc.PlayerTransform != null &&
                 (p - _npc.PlayerTransform.position).sqrMagnitude < 4f) continue;
+            // 目标必须落在可行走地面（非建筑顶）：从高处探测，命中 _Buildings 即换点
+            if (!Walkable(p)) continue;
             _target = p;
             break;
         }
         _walking = true;
         _stateUntil = Time.unscaledTime + legTimeout;
+    }
+
+    /// <summary>该点是否可站立：正上方探测，只认白名单地面根（Ground/_Roads/_River）。</summary>
+    private bool Walkable(Vector3 p)
+    {
+        var hits = Physics.RaycastAll(p + Vector3.up * 5f, Vector3.down, 6.5f, groundMask,
+                QueryTriggerInteraction.Ignore);
+        return hits.Any(h => GroundRoots.Contains(h.collider.transform.root.name));
     }
 
     private bool Reached(Vector3 p)
@@ -129,19 +140,34 @@ public class NpcWander : MonoBehaviour
         return false;
     }
 
-    /// <summary>向下 Raycast 求地面高度；打空则保持当前 y（平地兜底）。</summary>
+    /// <summary>可站立判定的地面根名白名单（命中这些才算"真地面"）。</summary>
+    private static readonly System.Collections.Generic.HashSet<string> GroundRoots =
+        new System.Collections.Generic.HashSet<string> { "Ground", "_Roads", "_River", "Ground_Road" };
+
+    /// <summary>向下 Raycast 求地面高度。只认白名单地面（Ground/_Roads/_River），
+    /// 命中其它任何东西（自己/建筑/道具/别的 NPC）都保持当前 y，配合 Walkable 换目标。</summary>
     private float GroundY(Vector3 at)
     {
         Vector3 origin = at + Vector3.up * GroundRayLift;
         if (Physics.Raycast(origin, Vector3.down, out var hit, GroundRayLift + 2f, groundMask,
                 QueryTriggerInteraction.Ignore))
         {
-            // 排除命中自身碰撞体
-            if (hit.collider.transform.root == transform.root)
-                return transform.position.y;
-            return hit.point.y;
+            if (GroundRoots.Contains(hit.collider.transform.root.name))
+                return hit.point.y;
+            return transform.position.y; // 自己/建筑/道具/他人 → 保持
         }
-        return transform.position.y;
+        // 打空兜底：高空救援——从 30m 找白名单地面；找不到回出生点高度
+        if (Physics.RaycastAll(at + Vector3.up * 30f, Vector3.down, 32f, groundMask,
+                QueryTriggerInteraction.Ignore)
+            .Any(h => GroundRoots.Contains(h.collider.transform.root.name)))
+        {
+            var g = Physics.RaycastAll(at + Vector3.up * 30f, Vector3.down, 32f, groundMask,
+                    QueryTriggerInteraction.Ignore)
+                .Where(h => GroundRoots.Contains(h.collider.transform.root.name))
+                .OrderBy(h => h.distance).First();
+            return g.point.y;
+        }
+        return _home.y;
     }
 
     /// <summary>游走/待机切换时暂停、恢复模型的呼吸微动（原地 bob+sway 与位移叠加会抖）。</summary>
