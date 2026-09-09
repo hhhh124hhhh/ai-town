@@ -14,8 +14,8 @@ public class NpcWander : MonoBehaviour
     [Header("游走范围")]
     [Tooltip("离出生点最大距离（米）")]
     public float radius = 6f;
-    [Tooltip("移动速度（米/秒），镇民散步节奏")]
-    public float walkSpeed = 1.2f;
+    [Tooltip("移动速度（米/秒），与走路动画 5s 循环步幅匹配（0.24 自然 + 提速动画后约 0.6）")]
+    public float walkSpeed = 0.6f;
 
     [Header("节奏")]
     [Tooltip("每次站桩时长区间（秒）")]
@@ -60,8 +60,14 @@ public class NpcWander : MonoBehaviour
 
         // 动画联动：行走播 walk（controller 里唯一 clip），停下即停播回默认站姿。
         // enabled=false 时 SkinnedMesh 冻结在当前帧——改为走时 enabled、停时归零 pose 重置。
+        // 动画联动：行走播 walk（controller 里唯一 clip），停下即停播回默认站姿。
+        // SMPLH walk 循环 5s（自然速度 0.24m/s），动画提速 2.5x 匹配 0.6m/s 移动，
+        // 腿步与位移同步，消除"滑步"感。
         if (_animator != null)
+        {
             _animator.enabled = _walking;
+            if (_walking) _animator.speed = 2.5f;
+        }
 
         if (_walking)
         {

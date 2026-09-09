@@ -1350,7 +1350,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6324280505983339869, guid: 54ddd33e3c26c463b89ba82979c3abf7, type: 3}
       propertyPath: m_LocalRotation.w
-      value: -0.00000004371139
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6324280505983339869, guid: 54ddd33e3c26c463b89ba82979c3abf7, type: 3}
       propertyPath: m_LocalRotation.x
@@ -1358,7 +1358,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6324280505983339869, guid: 54ddd33e3c26c463b89ba82979c3abf7, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6324280505983339869, guid: 54ddd33e3c26c463b89ba82979c3abf7, type: 3}
       propertyPath: m_LocalRotation.z
@@ -3036,7 +3036,7 @@ MonoBehaviour:
   turnSmoothTime: 0.35
   maxTurnSpeed: 270
   reAimDegrees: 25
-  modelYawOffset: 0
+  modelYawOffset: 180
 --- !u!136 &159963101
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -3112,7 +3112,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   radius: 6
-  walkSpeed: 1.2
+  walkSpeed: 0.6
   idleTime: {x: 2, y: 5}
   legTimeout: 8
   groundMask:
@@ -7388,7 +7388,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8442658653702135860, guid: 10d1b382fdfed488b966866518d66566, type: 3}
       propertyPath: m_LocalRotation.w
-      value: -0.00000004371139
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8442658653702135860, guid: 10d1b382fdfed488b966866518d66566, type: 3}
       propertyPath: m_LocalRotation.x
@@ -7396,7 +7396,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8442658653702135860, guid: 10d1b382fdfed488b966866518d66566, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8442658653702135860, guid: 10d1b382fdfed488b966866518d66566, type: 3}
       propertyPath: m_LocalRotation.z
@@ -11368,7 +11368,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   radius: 6
-  walkSpeed: 1.2
+  walkSpeed: 0.6
   idleTime: {x: 2, y: 5}
   legTimeout: 8
   groundMask:
@@ -14508,7 +14508,7 @@ MonoBehaviour:
   turnSmoothTime: 0.35
   maxTurnSpeed: 270
   reAimDegrees: 25
-  modelYawOffset: 0
+  modelYawOffset: 180
 --- !u!136 &788370591
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -14584,7 +14584,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   radius: 6
-  walkSpeed: 1.2
+  walkSpeed: 0.6
   idleTime: {x: 2, y: 5}
   legTimeout: 8
   groundMask:
@@ -16426,7 +16426,7 @@ MonoBehaviour:
   turnSmoothTime: 0.35
   maxTurnSpeed: 270
   reAimDegrees: 25
-  modelYawOffset: 0
+  modelYawOffset: 180
 --- !u!136 &871655430
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -16502,7 +16502,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   radius: 6
-  walkSpeed: 1.2
+  walkSpeed: 0.6
   idleTime: {x: 2, y: 5}
   legTimeout: 8
   groundMask:
@@ -26719,7 +26719,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 267122628760447957, guid: ce5f891eaba4c459cb97457a61836fea, type: 3}
       propertyPath: m_LocalRotation.w
-      value: -0.00000004371139
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 267122628760447957, guid: ce5f891eaba4c459cb97457a61836fea, type: 3}
       propertyPath: m_LocalRotation.x
@@ -26727,7 +26727,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 267122628760447957, guid: ce5f891eaba4c459cb97457a61836fea, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 267122628760447957, guid: ce5f891eaba4c459cb97457a61836fea, type: 3}
       propertyPath: m_LocalRotation.z
@@ -34671,7 +34671,7 @@ MonoBehaviour:
   turnSmoothTime: 0.35
   maxTurnSpeed: 270
   reAimDegrees: 25
-  modelYawOffset: 0
+  modelYawOffset: 180
 --- !u!136 &1909512091
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -34747,7 +34747,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   radius: 6
-  walkSpeed: 1.2
+  walkSpeed: 0.6
   idleTime: {x: 2, y: 5}
   legTimeout: 8
   groundMask:
@@ -37061,7 +37061,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6290980845430423949, guid: 1a0071dbacae54dae8743ffb6519d9e9, type: 3}
       propertyPath: m_LocalRotation.w
-      value: -0.00000004371139
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6290980845430423949, guid: 1a0071dbacae54dae8743ffb6519d9e9, type: 3}
       propertyPath: m_LocalRotation.x
@@ -37069,7 +37069,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6290980845430423949, guid: 1a0071dbacae54dae8743ffb6519d9e9, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6290980845430423949, guid: 1a0071dbacae54dae8743ffb6519d9e9, type: 3}
       propertyPath: m_LocalRotation.z
