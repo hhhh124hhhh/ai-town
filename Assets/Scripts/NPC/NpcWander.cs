@@ -28,6 +28,7 @@ public class NpcWander : MonoBehaviour
     public LayerMask groundMask = ~0;
 
     private NPCController _npc;
+    private Animator _animator; // 绑骨动画（walk 联动，无则跳过）
     private Vector3 _home;
     private Vector3 _target;
     private float _stateUntil;
@@ -38,6 +39,7 @@ public class NpcWander : MonoBehaviour
     private void Awake()
     {
         _npc = GetComponent<NPCController>();
+        _animator = GetComponentInChildren<Animator>(true);
         _home = transform.position;
     }
 
@@ -55,6 +57,11 @@ public class NpcWander : MonoBehaviour
             if (_walking) _walking = false;
             return;
         }
+
+        // 动画联动：行走播 walk（controller 里唯一 clip），停下即停播回默认站姿。
+        // enabled=false 时 SkinnedMesh 冻结在当前帧——改为走时 enabled、停时归零 pose 重置。
+        if (_animator != null)
+            _animator.enabled = _walking;
 
         if (_walking)
         {
@@ -118,6 +125,14 @@ public class NpcWander : MonoBehaviour
         if (BlockedAhead(dir)) return;
 
         Vector3 pos = transform.position + dir * (walkSpeed * Time.deltaTime);
+
+        // 穿墙拦截：下一步位置若在建筑/道具体积内 → 本帧不走并立刻换目标（防卡脸蹭墙）
+        if (WouldClipBuilding(pos))
+        {
+            PickNewTarget();
+            return;
+        }
+
         pos.y = GroundY(pos);
         transform.position = pos;
 
@@ -126,6 +141,30 @@ public class NpcWander : MonoBehaviour
         float yaw = Mathf.Atan2(dir.x, dir.z) * Mathf.Rad2Deg;
         var e = transform.eulerAngles;
         transform.rotation = Quaternion.Euler(0f, Mathf.MoveTowardsAngle(e.y, yaw, 120f * Time.deltaTime), 0f);
+    }
+
+    /// <summary>下一步位置是否会撞进建筑/道具/他人体积（胶囊体积用 Overlap 球探测）。
+    /// 返回 true 时调用方应放弃当前目标。白名单地面（Ground/_Roads/_River）不在此列。</summary>
+    private bool WouldClipBuilding(Vector3 nextPos)
+    {
+        const float probeR = 0.45f; // 约 NPC 半身宽
+        var hits = Physics.OverlapSphere(nextPos, probeR, groundMask, QueryTriggerInteraction.Ignore);
+        foreach (var h in hits)
+        {
+            var rootName = h.transform.root.name;
+            // 自己人（自己/自家骑手）不算
+            if (h.transform.root == transform.root) continue;
+            // 真地面/路面不算
+            if (GroundRoots.Contains(rootName)) continue;
+            // 玩家不算（避让已单独处理）
+            if (rootName == "Player") continue;
+            // 其它 NPC 也别撞（但只阻挡，不换目标——用轻处理：跳过本帧）
+            if (h.transform.root.name.StartsWith("NPC_") || rootName.Contains("机器人") || h is CapsuleCollider && h.GetComponent<NPCController>() != null)
+                continue;
+            // 剩下的就是建筑/道具 → 撞上了
+            return true;
+        }
+        return false;
     }
 
     private bool BlockedAhead(Vector3 dir)
