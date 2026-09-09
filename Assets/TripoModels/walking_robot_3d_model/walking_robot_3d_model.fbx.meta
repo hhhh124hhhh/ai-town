@@ -1,0 +1,618 @@
+fileFormatVersion: 2
+guid: DytJsX+oUCr1QblNWPaio9OkxgF8UpQ8QFG4ZQpOhi1n5TEpa/rvGuI=
+ModelImporter:
+  serializedVersion: 22361
+  internalIDToNameTable: []
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: No Name
+    second: {fileID: 2100000, guid: e7553ce5fdfbe4c79b9ce4514304b3df, type: 2}
+  materials:
+    materialImportMode: 1
+    materialName: 0
+    materialSearch: 1
+    materialLocation: 1
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    removeConstantScaleCurves: 0
+    motionNodeName: 
+    rigImportErrors: 
+    rigImportWarnings: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
+    importConstraints: 0
+    animationCompression: 1
+    aCLCompressionLevel: 3
+    aCLCurvePrecision: 0.01
+    aCLFastSampleMode: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    extraUserProperties: []
+    clipAnimations: []
+    isReadable: 0
+    tuanjieGIEnable: 0
+    tuanjieGIGenSDFFactor: 1
+    tuanjieGIGenSDFBias: 0.25
+    tuanjieGIDoubleSidedMode: 0
+    tuanjieGIGenFacetNums: 12
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    totalVerticesCount: 1181314
+    totalTrianglesCount: 2362807
+    addColliders: 0
+    useSRGBMaterialColor: 1
+    sortHierarchyByName: 1
+    importPhysicalCameras: 1
+    importVisibility: 1
+    importBlendShapes: 1
+    importCameras: 1
+    importLights: 1
+    nodeNameCollisionStrategy: 1
+    fileIdsGeneration: 2
+    swapUVChannels: 0
+    generateSecondaryUV: 0
+    useFileUnits: 1
+    keepQuads: 0
+    weldVertices: 1
+    bakeAxisConversion: 0
+    preserveHierarchy: 0
+    skinWeightsMode: 0
+    maxBonesPerVertex: 4
+    minBoneWeight: 0.001
+    optimizeBones: 1
+    meshOptimizationFlags: -1
+    indexFormat: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVMarginMethod: 1
+    secondaryUVMinLightmapResolution: 40
+    secondaryUVMinObjectScale: 1
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+    strictVertexDataChecks: 0
+  virtualGeometry:
+    virtualGeometry: 0
+    useTransparent: 0
+    setVGForeachMesh: 0
+    isFirstUse: 1
+    virtualGeometrySettings:
+      generateGeometryBuffer: 0
+      surfaceCompensation: 0
+      allMeshUse: 1
+      ignoreSimpleMesh: 0
+      transformScaleState: 0
+      isPossibleOverflow: 0
+      hasBoneData: 0
+      isBoneCountOverflow: 0
+    virtualGeometryPlatformSettings:
+    - serializedVersion: 0
+      overridden: 0
+      ignorePlatformSupport: 0
+      buildTarget: DefaultVirtualGeometryPlatform
+      positionPrecision: -2147483648
+      normalPrecision: -2147483648
+      tangentPrecision: -2147483648
+      boneWeightPrecision: -2147483648
+      detailedTriangleCount: 0
+      detailedVertexCount: 0
+      rootPageSize: 0
+      streamablePageSize: 0
+      reserveTrianglePercent: 100
+      reserveDetailLevel: 0
+    - serializedVersion: 0
+      overridden: 0
+      ignorePlatformSupport: 0
+      buildTarget: Standalone
+      positionPrecision: -2147483648
+      normalPrecision: -2147483648
+      tangentPrecision: -2147483648
+      boneWeightPrecision: -2147483648
+      detailedTriangleCount: 0
+      detailedVertexCount: 0
+      rootPageSize: 0
+      streamablePageSize: 0
+      reserveTrianglePercent: 100
+      reserveDetailLevel: 0
+    - serializedVersion: 0
+      overridden: 0
+      ignorePlatformSupport: 0
+      buildTarget: iPhone
+      positionPrecision: -2147483648
+      normalPrecision: -2147483648
+      tangentPrecision: -2147483648
+      boneWeightPrecision: -2147483648
+      detailedTriangleCount: 0
+      detailedVertexCount: 0
+      rootPageSize: 0
+      streamablePageSize: 0
+      reserveTrianglePercent: 100
+      reserveDetailLevel: 0
+    - serializedVersion: 0
+      overridden: 0
+      ignorePlatformSupport: 0
+      buildTarget: Android
+      positionPrecision: -2147483648
+      normalPrecision: -2147483648
+      tangentPrecision: -2147483648
+      boneWeightPrecision: -2147483648
+      detailedTriangleCount: 0
+      detailedVertexCount: 0
+      rootPageSize: 0
+      streamablePageSize: 0
+      reserveTrianglePercent: 100
+      reserveDetailLevel: 0
+    selectedVGMeshes:
+    - index: 0
+      meshName: tripo_part_0
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 1
+      meshName: tripo_part_8
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 2
+      meshName: tripo_part_20
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 3
+      meshName: tripo_part_28
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 4
+      meshName: tripo_part_36
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 5
+      meshName: tripo_part_44
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 6
+      meshName: tripo_part_12
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 7
+      meshName: tripo_part_16
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 8
+      meshName: tripo_part_24
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 9
+      meshName: tripo_part_32
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 10
+      meshName: tripo_part_46
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 11
+      meshName: tripo_part_37
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 12
+      meshName: tripo_part_21
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 13
+      meshName: tripo_part_13
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 14
+      meshName: tripo_part_29
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 15
+      meshName: tripo_part_45
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 16
+      meshName: tripo_part_1
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 17
+      meshName: tripo_part_49
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 18
+      meshName: tripo_part_5
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 19
+      meshName: tripo_part_33
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 20
+      meshName: tripo_part_41
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 21
+      meshName: tripo_part_3
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 22
+      meshName: tripo_part_51
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 23
+      meshName: tripo_part_47
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 24
+      meshName: tripo_part_2
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 25
+      meshName: tripo_part_50
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 26
+      meshName: tripo_part_6
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 27
+      meshName: tripo_part_34
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 28
+      meshName: tripo_part_42
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 29
+      meshName: tripo_part_10
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 30
+      meshName: tripo_part_18
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 31
+      meshName: tripo_part_26
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 32
+      meshName: tripo_part_38
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 33
+      meshName: tripo_part_14
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 34
+      meshName: tripo_part_4
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 35
+      meshName: tripo_part_17
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 36
+      meshName: tripo_part_25
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 37
+      meshName: tripo_part_40
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 38
+      meshName: tripo_part_48
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 39
+      meshName: tripo_part_9
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 40
+      meshName: tripo_part_22
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 41
+      meshName: tripo_part_7
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 42
+      meshName: tripo_part_35
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 43
+      meshName: tripo_part_43
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 44
+      meshName: tripo_part_11
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 45
+      meshName: tripo_part_19
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 46
+      meshName: tripo_part_27
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 47
+      meshName: tripo_part_39
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 48
+      meshName: tripo_part_15
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 49
+      meshName: tripo_part_23
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 50
+      meshName: tripo_part_31
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 51
+      meshName: tripo_part_30
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    supportVGMeshes:
+    - index: 0
+      meshName: tripo_part_0
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 1
+      meshName: tripo_part_8
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 2
+      meshName: tripo_part_20
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 3
+      meshName: tripo_part_28
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 4
+      meshName: tripo_part_36
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 5
+      meshName: tripo_part_44
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 6
+      meshName: tripo_part_12
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 7
+      meshName: tripo_part_16
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 8
+      meshName: tripo_part_24
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 9
+      meshName: tripo_part_32
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 10
+      meshName: tripo_part_46
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 11
+      meshName: tripo_part_37
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 12
+      meshName: tripo_part_21
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 13
+      meshName: tripo_part_13
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 14
+      meshName: tripo_part_29
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 15
+      meshName: tripo_part_45
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 16
+      meshName: tripo_part_1
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 17
+      meshName: tripo_part_49
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 18
+      meshName: tripo_part_5
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 19
+      meshName: tripo_part_33
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 20
+      meshName: tripo_part_41
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 21
+      meshName: tripo_part_3
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 22
+      meshName: tripo_part_51
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 23
+      meshName: tripo_part_47
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 24
+      meshName: tripo_part_2
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 25
+      meshName: tripo_part_50
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 26
+      meshName: tripo_part_6
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 27
+      meshName: tripo_part_34
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 28
+      meshName: tripo_part_42
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 29
+      meshName: tripo_part_10
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 30
+      meshName: tripo_part_18
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 31
+      meshName: tripo_part_26
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 32
+      meshName: tripo_part_38
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 33
+      meshName: tripo_part_14
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 34
+      meshName: tripo_part_4
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 35
+      meshName: tripo_part_17
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 36
+      meshName: tripo_part_25
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 37
+      meshName: tripo_part_40
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 38
+      meshName: tripo_part_48
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 39
+      meshName: tripo_part_9
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 40
+      meshName: tripo_part_22
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 41
+      meshName: tripo_part_7
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 42
+      meshName: tripo_part_35
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 43
+      meshName: tripo_part_43
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 44
+      meshName: tripo_part_11
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 45
+      meshName: tripo_part_19
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 46
+      meshName: tripo_part_27
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 47
+      meshName: tripo_part_39
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 48
+      meshName: tripo_part_15
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 49
+      meshName: tripo_part_23
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 50
+      meshName: tripo_part_31
+      lodLevel: 0
+      meshGeometryBuffer: 0
+    - index: 51
+      meshName: tripo_part_30
+      lodLevel: 0
+      meshGeometryBuffer: 0
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 3
+    normalCalculationMode: 4
+    legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 0
+    blendShapeNormalImportMode: 1
+    normalSmoothingSource: 0
+  referencedClips: []
+  importAnimation: 1
+  overrideDefaultPose: 0
+  humanDescription:
+    serializedVersion: 3
+    human: []
+    skeleton: []
+    namedPoseList:
+    - name: Default
+      skeleton: []
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    globalScale: 1
+    rootMotionBoneName: 
+    defaultPoseIndex: -1
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  autoGenerateAvatarMappingIfUnspecified: 1
+  animationType: 2
+  humanoidOversampling: 1
+  avatarSetup: 0
+  addHumanoidExtraRootOnlyWhenUsingAvatar: 1
+  importBlendShapeDeformPercent: 1
+  remapMaterialsIfMaterialImportModeIsNone: 0
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
