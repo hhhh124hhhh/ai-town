@@ -11418,6 +11418,22 @@ MonoBehaviour:
   maxTurnSpeed: 270
   reAimDegrees: 25
   modelYawOffset: 0
+--- !u!114 &614915733
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 614915727}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e641a62a1ffea4df4ab8a54c29be21b9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  legSwingAmplitude: 0.5
+  legSwingPeriod: 0.5
+  bobAmplitude: 0.03
+  bobPeriod: 0.5
 --- !u!1 &617266124
 GameObject:
   m_ObjectHideFlags: 0
@@ -25144,6 +25160,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0af4e53aaab66431782da20bad74c53f, type: 3}
       insertIndex: -1
       addedObject: {fileID: 614915729}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0af4e53aaab66431782da20bad74c53f, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 614915733}
   m_SourcePrefab: {fileID: 100100000, guid: 0af4e53aaab66431782da20bad74c53f, type: 3}
 --- !u!1 &1319703977
 GameObject:
